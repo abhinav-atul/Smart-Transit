@@ -1,9 +1,11 @@
 import time
 import json
-import firebase_admin
-from firebase_admin import credentials, firestore, initialize_app
 from geopy.distance import geodesic
+# import firebase_admin
+# from firebase_admin import credentials, firestore
 import googlemaps
+import requests
+API_URL = "http://localhost:8000/location"
 
 # --- Configuration ---
 APP_ID = 'transitnow-prototype'
@@ -133,7 +135,7 @@ def simulate_buses():
 
             final_pos = path[data["segment_index"]]
 
-            # --- SIMPLIFIED FIRESTORE PAYLOAD ---
+            ''' # --- SIMPLIFIED FIRESTORE PAYLOAD ---
             # This is the pure GPS data sent to the frontend
             bus_doc_ref = buses_col_ref.document(bus_id)
             bus_doc_ref.set({
@@ -143,7 +145,24 @@ def simulate_buses():
                 "timestamp": firestore.SERVER_TIMESTAMP,
                 "next_stop_index": data["next_stop_index"]
             })
-            print(f"Updating GPS for bus: {bus_id} on Route: {data['routeId']}")
+            print(f"Updating GPS for bus: {bus_id} on Route: {data['routeId']}") '''
+            
+            # --- NEW API PAYLOAD ---
+            payload = {
+                "vehicle_id": bus_id,
+                "route_id": data["routeId"],
+                "lat": final_pos[0],
+                "lng": final_pos[1],
+                "speed": 40.0, # Placeholder: Add random speed variation logic here later
+                "timestamp": datetime.utcnow().isoformat()
+            }
+
+            try:
+                # Send to API Gateway
+                response = requests.post(API_URL, json=payload)
+                print(f"Ping sent for {bus_id}: {response.status_code}")
+            except Exception as e:
+                print(f"API Error: {e}")
 
         # Controls the speed of the simulation
         time.sleep(2) 
