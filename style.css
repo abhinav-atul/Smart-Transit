@@ -1,59 +1,148 @@
-/* --- Liquid Glass Design System --- */
+/* --- Enhanced Liquid Glass + Neon Design System --- */
+
+/* Smooth gradient animation */
 @keyframes gradient-animation {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
+/* Dynamic background */
 body {
-  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-  background-size: 400% 400%;
-  animation: gradient-animation 15s ease infinite;
+  background: linear-gradient(-45deg, #ff6b6b, #ff0080, #4f9eff, #23d5ab, #ffd93d);
+  background-size: 500% 500%;
+  animation: gradient-animation 18s ease infinite;
+  font-family: 'Inter', sans-serif;
+  color: white;
+  overflow: hidden;
 }
 
-#map { 
-  height: 100vh; 
-  width: 100%; 
-  z-index: 10; 
-  cursor: default; 
+/* Full-screen map container */
+#map {
+  height: 100vh;
+  width: 100%;
+  z-index: 5;
+  cursor: default;
   background-color: transparent;
+  transition: filter 0.4s ease;
 }
+
+/* Map blur on overlay open */
+.map-blur {
+  filter: blur(6px) brightness(0.8);
+}
+
+/* Selected route styling */
 .selected-route {
-  background-color: #3b82f6 !important;
-  color: white !important;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #fff !important;
+  box-shadow: 0px 0px 12px rgba(59, 130, 246, 0.8);
+  border-radius: 12px;
+  transition: all 0.3s ease-in-out;
 }
 
-.selected-route p, .selected-route i {
-    color: white !important;
+.selected-route:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 18px rgba(59, 130, 246, 1);
 }
+
+.selected-route p,
+.selected-route i {
+  color: #fff !important;
+}
+
+/* Glass panel enhanced */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 18px;
+  padding: 1rem;
+  transition: all 0.35s ease;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.4);
 }
 
+/* Glass hover effect */
+.glass-panel:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(31, 38, 135, 0.55);
+}
+
+/* Dark mode variant */
 .dark .glass-panel {
-  background: rgba(26, 32, 44, 0.7);
+  background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.blinking { animation: blinker 1.5s linear infinite; }
-@keyframes blinker { 50% { opacity: 0.3; } }
+/* Neon blinking */
+.blinking {
+  animation: blinker 1.5s linear infinite;
+}
 
-.spinner { animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes blinker {
+  50% {
+    opacity: 0.2;
+  }
+}
 
-/* Custom styling for the Google Maps InfoWindow */
+/* Smooth spinner */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Google Maps InfoWindow Styling Enhanced --- */
+
 .gm-style .gm-style-iw-c {
-  background-color: rgba(26, 32, 44, 0.8) !important;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: blur(15px) saturate(180%);
+  -webkit-backdrop-filter: blur(15px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 15px !important;
   padding: 1rem !important;
+  box-shadow: 0px 8px 35px rgba(0, 0, 0, 0.6);
+  color: #f8fafc;
 }
-.gm-style .gm-style-iw-d { overflow: hidden !important; color: white; }
-.gm-style .gm-style-iw-t::after { background: rgba(26, 32, 44, 0.8) !important; }
 
+/* Text inside InfoWindow */
+.gm-style .gm-style-iw-d {
+  overflow: hidden !important;
+  color: #e2e8f0 !important;
+  font-size: 0.95rem;
+}
+
+/* Tail of the InfoWindow */
+.gm-style .gm-style-iw-t::after {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border: none !important;
+}
+
+/* Button / List hover enhancement */
+.list-item {
+  transition: all 0.25s ease;
+}
+
+.list-item:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateX(4px);
+  border-radius: 10px;
+}
