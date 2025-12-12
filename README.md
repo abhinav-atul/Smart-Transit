@@ -42,13 +42,13 @@
 
 Follow these steps to set up the project locally.
 
-### Prerequisites
+### Prerequisites:
 1.  **Node.js & NPM** (for package management).
 2.  **Python 3.x** (for the simulator).
 3.  A **Google Cloud Project** with the *Maps JavaScript API* and *Directions API* enabled.
 4.  A **Firebase Project** with Firestore enabled.
 
-### Step 1: Clone & Install Dependencies
+Step 1: Clone & Install Dependencies
 Clone the repository and install the Python dependencies for the simulator.
 
 ```bash
