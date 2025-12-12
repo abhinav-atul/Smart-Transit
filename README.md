@@ -1,4 +1,7 @@
-# jg-smart-transit
+# Smart-transit
+
+---
+ 
 # 🚌 Smart-Transit
 > A real-time public transit tracking system featuring live bus locations, dynamic routing, and an interactive "Liquid Glass" UI.
 
