@@ -1,35 +1,23 @@
-// Firebase imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
 // --- CONFIGURATION ---
-const GOOGLE_MAPS_API_KEY = "AIzaSyDec5RO1JPrJdX0X5ntqupEU8RQ8rxDiwM"; // Replace with your key
-
-// Firebase config
-const firebaseConfig = {
-    apiKey: "AIzaSyD6EzcF1fbB32u5ti4GvHrgAH5nNjYdYU0",
-    authDomain: "transitnow-1383b.firebaseapp.com",
-    projectId: "transitnow-1383b",
-    storageBucket: "transitnow-1383b.appspot.com",
-    messagingSenderId: "906839958985",
-    appId: "1:906839958985:web:77902b246cdc1f591bf418"
-};
+// The URL of your Python/FastAPI Backend
+const API_BASE_URL = "http://localhost:8000";
+const GOOGLE_MAPS_API_KEY = "AIzaSyDec5RO1JPrJdX0X5ntqupEU8RQ8rxDiwM"; // Replace if needed
 
 // --- GOOGLE MAPS STYLES ---
-const lightMapStyle = [ { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] }, { elementType: "labels.icon", stylers: [{ visibility: "off" }] }, { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] }, { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] }, { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] }, { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] }, { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] }, { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] }, { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }, { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] }, { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] }, { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] }, { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] }, { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }, { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] }, { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#eeeeee" }] }, { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] }, { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }, ];
-const darkMapStyle = [ { elementType: "geometry", stylers: [{ color: "#242f3e" }] }, { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] }, { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }, { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] }, { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] }, { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] }, { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#6b9a76" }] }, { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] }, { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] }, { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] }, { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] }, { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] }, { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] }, { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] }, { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] }, { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }, { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] }, { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] }, ];
+const lightMapStyle = [{ elementType: "geometry", stylers: [{ color: "#f5f5f5" }] }, { elementType: "labels.icon", stylers: [{ visibility: "off" }] }, { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] }, { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] }, { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] }, { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] }, { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] }, { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] }, { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }, { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] }, { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] }, { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] }, { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] }, { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }, { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] }, { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#eeeeee" }] }, { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] }, { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }];
+const darkMapStyle = [{ elementType: "geometry", stylers: [{ color: "#242f3e" }] }, { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] }, { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }, { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] }, { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] }, { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] }, { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#6b9a76" }] }, { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] }, { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] }, { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] }, { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] }, { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] }, { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] }, { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] }, { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] }, { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }, { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] }, { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] }];
 
 // --- APP GLOBALS ---
-let app, auth, db, map, infoWindow;
-let busMarkers = {}, routePolylines = {}, allRoutesData = {};
-let stopMarkers = [];
+let map, infoWindow;
+let busMarkers = {};     // Object to store Google Maps Markers by Bus ID
+let routePolylines = {}; // Object to store Polylines by Route ID
+let stopMarkers = [];    // Array of stop markers for the selected route
 let selectedRouteId = null;
-let allAvailableStops = [];
-let stopToRoutesMap = new Map();
 
-// Firebase App ID
-const appId = 'transitnow-prototype'; 
+// Data Stores
+let allRoutesData = {};   // { "AS-1": { routeName: "...", stops: [...] }, ... }
+let allAvailableStops = []; // Array of { name, lat, lng }
+let stopToRoutesMap = new Map(); // Map<StopName, [RouteID]>
 
 // --- DOM ELEMENTS ---
 const finderViewBtn = document.getElementById('finder-view-btn');
@@ -57,245 +45,235 @@ togglePanelBtn.addEventListener('click', () => panelContent.classList.toggle('hi
 sosBtn.addEventListener('click', () => sosModal.classList.remove('hidden'));
 closeSosModalBtn.addEventListener('click', () => sosModal.classList.add('hidden'));
 
-// --- VIEW SWITCHING ---
+// --- VIEW SWITCHING LOGIC ---
 function switchView(view) {
     const views = { finder: finderView, commuter: commuterView, authority: authorityView };
     const buttons = { finder: finderViewBtn, commuter: commuterViewBtn, authority: authorityViewBtn };
+
+    // Hide all views
     Object.values(views).forEach(v => v.classList.add('hidden'));
+
+    // Reset all buttons
     Object.values(buttons).forEach(b => {
         b.classList.remove('bg-blue-600', 'text-white', 'shadow');
         b.classList.add('text-gray-600', 'dark:text-gray-300');
     });
+
+    // Activate selected view
     views[view].classList.remove('hidden');
     buttons[view].classList.add('bg-blue-600', 'text-white', 'shadow');
     buttons[view].classList.remove('text-gray-600', 'dark:text-gray-300');
 }
 
-// --- BUS FINDER LOGIC (ACCURATE VERSION) ---
-async function findAvailableBuses() {
-    const startInput = document.getElementById('start-location-input');
-    const endInput = document.getElementById('end-location-input');
-    finderResultsList.innerHTML = `<div class="flex justify-center items-center p-4"><div class="spinner border-t-blue-500 border-4 w-6 h-6 rounded-full"></div></div>`;
+// --- INITIALIZATION ---
+async function main() {
+    try {
+        console.log("Initializing App...");
 
-    const startStopName = startInput.value;
-    const endStopName = endInput.value;
+        // 1. Fetch Static Data (Routes & Stops)
+        // Note: For now, we simulate fetching full route details. 
+        // In a full implementation, you would have a GET /routes endpoint.
+        await fetchAndProcessStaticData();
 
-    if (!startStopName || !endStopName || !stopToRoutesMap.has(startStopName) || !stopToRoutesMap.has(endStopName)) {
-        finderResultsList.innerHTML = `<p class="text-red-500 text-sm text-center">Please select valid start and end stops from the list.</p>`;
-        return;
+        // 2. Setup Input Listeners for Finder
+        setupStopInputListeners();
+
+        // 3. Start Live Polling (The Heart of the System)
+        setInterval(fetchLiveBusData, 2000); // Poll every 2 seconds
+
+        // Initial Fetch
+        fetchLiveBusData();
+
+    } catch (error) {
+        console.error("Initialization Error:", error);
     }
-
-    const startRoutes = stopToRoutesMap.get(startStopName);
-    const endRoutes = stopToRoutesMap.get(endStopName);
-    const validRoutes = startRoutes.filter(routeId => endRoutes.includes(routeId));
-
-    if (validRoutes.length === 0) {
-        finderResultsList.innerHTML = `<p class="text-gray-500 dark:text-gray-400 text-sm text-center">No direct bus routes found between these stops.</p>`;
-        return;
-    }
-    
-    const activeBusesOnRoute = Object.values(busMarkers).filter(marker => validRoutes.includes(marker.get('busData').routeId));
-    
-    if (activeBusesOnRoute.length === 0) {
-        finderResultsList.innerHTML = `<p class="text-gray-500 dark:text-gray-400 text-sm text-center">Routes found, but no active buses currently.</p>`;
-        return;
-    }
-    
-    const startStopData = allAvailableStops.find(s => s.name === startStopName);
-    if (!startStopData) {
-        finderResultsList.innerHTML = `<p class="text-red-500 text-sm text-center">Could not find start stop coordinates.</p>`;
-        return;
-    }
-    const startPoint = new google.maps.LatLng(startStopData.lat, startStopData.lng);
-
-    const distanceService = new google.maps.DistanceMatrixService();
-    const origins = activeBusesOnRoute.map(bus => bus.getPosition());
-    distanceService.getDistanceMatrix({
-        origins: origins,
-        destinations: [startPoint],
-        travelMode: 'DRIVING',
-    }, (response, status) => {
-        if (status === 'OK') {
-            finderResultsList.innerHTML = '';
-            const resultsWithEta = [];
-            response.rows.forEach((row, i) => {
-                if (row.elements[0].status === 'OK') {
-                    resultsWithEta.push({
-                        busData: activeBusesOnRoute[i].get('busData'),
-                        etaText: row.elements[0].duration.text,
-                        etaValue: row.elements[0].duration.value
-                    });
-                }
-            });
-            
-            resultsWithEta.sort((a, b) => a.etaValue - b.etaValue);
-
-            resultsWithEta.forEach(result => {
-                const resultElement = document.createElement('div');
-                resultElement.className = 'p-3 rounded-lg bg-gray-50/50 dark:bg-gray-700/50 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/50';
-                resultElement.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <p class="font-bold text-gray-800 dark:text-white">${allRoutesData[result.busData.routeId].routeName}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Bus: ${result.busData.id}</p>
-                        </div>
-                        <p class="text-sm font-semibold text-green-500">${result.etaText}</p>
-                    </div>
-                `;
-                resultElement.addEventListener('click', () => {
-                    const marker = busMarkers[result.busData.id];
-                    if (marker) {
-                         map.panTo(marker.getPosition());
-                         google.maps.event.trigger(marker, 'click');
-                    }
-                });
-                finderResultsList.appendChild(resultElement);
-            });
-        } else {
-            finderResultsList.innerHTML = `<p class="text-red-500 text-sm text-center">Could not calculate ETAs.</p>`;
-        }
-    });
 }
 
-// --- STOP LIST FUNCTIONS ---
-async function fetchAllStopsAndPopulate() {
-    const uniqueStops = new Map();
+// --- DATA FETCHING ---
+
+/**
+ * Fetches static route configuration (Paths, Stops)
+ * Since the backend mainly stores logs, we reconstruct the static map data here
+ * or fetch from a dedicated endpoint if available.
+ */
+async function fetchAndProcessStaticData() {
+    try {
+        // Ideally: const response = await fetch(`${API_BASE_URL}/routes`);
+        // For the Prototype: We load the config.json logic or a mock structure
+        // This simulates what the API should return.
+
+        // Mocking the API response structure based on your config.json
+        // In production, move this data to the database and fetch via API
+        const mockResponse = {
+            "AS-1": {
+                routeName: "AS - 1",
+                stops: [
+                    { name: "Golden Temple", lat: 31.6200, lng: 74.8765 },
+                    { name: "Jallianwala Bagh", lat: 31.6209, lng: 74.8801 },
+                    { name: "Partition Museum", lat: 31.6258, lng: 74.8787 },
+                    { name: "Gobindgarh Fort", lat: 31.6271, lng: 74.8603 }
+                ]
+            },
+            "AS-2": {
+                routeName: "AS - 2",
+                stops: [
+                    { name: "Hall Bazaar", lat: 31.6298, lng: 74.8760 },
+                    { name: "Katra Jaimal Singh Bazaar", lat: 31.6261, lng: 74.8756 },
+                    { name: "Lawrence Road", lat: 31.6490, lng: 74.8600 }
+                ]
+            },
+            "AS-3": {
+                routeName: "AS - 3",
+                stops: [
+                    { name: "Durgiana Temple", lat: 31.6254, lng: 74.8676 },
+                    { name: "Mata Lal Devi Temple", lat: 31.6372, lng: 74.8611 },
+                    { name: "Ram Tirth Temple", lat: 31.6510, lng: 74.7550 }
+                ]
+            }
+        };
+
+        allRoutesData = mockResponse;
+        processRouteDataForUI();
+        renderRouteListUI();
+
+    } catch (e) {
+        console.error("Failed to load static route data", e);
+    }
+}
+
+function processRouteDataForUI() {
+    allAvailableStops = [];
     stopToRoutesMap = new Map();
+    const uniqueStops = new Set();
 
-    const routesSnapshot = await getDocs(collection(db, `/artifacts/${appId}/routes`));
-    for (const routeDoc of routesSnapshot.docs) {
-        const routeId = routeDoc.id;
-        const stopsSnapshot = await getDocs(query(collection(routeDoc.ref, 'stops'), orderBy('order')));
-        stopsSnapshot.forEach(stopDoc => {
-            const stopData = stopDoc.data();
-            if (!uniqueStops.has(stopData.name)) {
-                uniqueStops.set(stopData.name, {
-                    name: stopData.name,
-                    lat: stopData.position.latitude,
-                    lng: stopData.position.longitude
-                });
-            }
-            if (!stopToRoutesMap.has(stopData.name)) {
-                stopToRoutesMap.set(stopData.name, []);
-            }
-            stopToRoutesMap.get(stopData.name).push(routeId);
-        });
-    }
-
-    allAvailableStops = Array.from(uniqueStops.values());
-    const datalist = document.getElementById('stops-datalist');
-    if (!datalist) return;
-    datalist.innerHTML = ''; 
-    allAvailableStops.forEach(stop => {
-        const option = document.createElement('option');
-        option.value = stop.name;
-        datalist.appendChild(option);
-    });
-}
-
-function setupStopInputListeners() {
-    const startInput = document.getElementById('start-location-input');
-    const endInput = document.getElementById('end-location-input');
-    const listener = (event) => {
-        const input = event.target;
-        const selectedStop = allAvailableStops.find(stop => stop.name === input.value);
-        if (selectedStop) {
-            input.dataset.lat = selectedStop.lat;
-            input.dataset.lng = selectedStop.lng;
-        } else {
-            delete input.dataset.lat;
-            delete input.dataset.lng;
+    Object.entries(allRoutesData).forEach(([routeId, routeData]) => {
+        // Draw Route Polyline (Simplified straight lines for prototype)
+        if (routeData.stops.length > 1) {
+            const pathCoords = routeData.stops.map(s => ({ lat: s.lat, lng: s.lng }));
+            const polyline = new google.maps.Polyline({
+                path: pathCoords,
+                geodesic: true,
+                strokeColor: "#3b82f6",
+                strokeOpacity: 0.6,
+                strokeWeight: 5
+            });
+            // Don't set map yet, only when highlighted
+            routePolylines[routeId] = polyline;
         }
-    };
-    startInput.addEventListener('input', listener);
-    endInput.addEventListener('input', listener);
-}
 
-// --- THEME & MAP ---
-function applyTheme(theme) {
-    if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
-        themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
-        if (map) map.setOptions({ styles: darkMapStyle });
-    } else {
-        document.documentElement.classList.remove('dark');
-        themeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
-        if (map) map.setOptions({ styles: lightMapStyle });
+        // Process Stops
+        routeData.stops.forEach(stop => {
+            if (!uniqueStops.has(stop.name)) {
+                uniqueStops.add(stop.name);
+                allAvailableStops.push({ name: stop.name, lat: stop.lat, lng: stop.lng });
+            }
+            if (!stopToRoutesMap.has(stop.name)) {
+                stopToRoutesMap.set(stop.name, []);
+            }
+            stopToRoutesMap.get(stop.name).push(routeId);
+        });
+    });
+
+    // Populate Datalist
+    const datalist = document.getElementById('stops-datalist');
+    if (datalist) {
+        datalist.innerHTML = '';
+        allAvailableStops.forEach(stop => {
+            const option = document.createElement('option');
+            option.value = stop.name;
+            datalist.appendChild(option);
+        });
     }
-    for (const busId in busMarkers) {
-    const marker = busMarkers[busId];
-    marker.setIcon(createBusIcon());
+}
+
+/**
+ * Polls the backend for live bus positions
+ */
+async function fetchLiveBusData() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/buses/live`);
+        if (!response.ok) throw new Error("API Offline");
+
+        const liveBuses = await response.json();
+
+        const activeBusIds = new Set();
+        const formattedBuses = [];
+
+        liveBuses.forEach(bus => {
+            // Backend returns: { vehicle_id, route_id, lat, lng, speed }
+            const busData = {
+                id: bus.vehicle_id,
+                routeId: bus.route_id,
+                lat: bus.lat,
+                lng: bus.lng,
+                speed: bus.speed,
+                timestamp: new Date()
+            };
+
+            updateBusMarker(busData);
+            activeBusIds.add(busData.id);
+            formattedBuses.push(busData);
+        });
+
+        // Cleanup Ghost Buses
+        for (const busId in busMarkers) {
+            if (!activeBusIds.has(busId)) {
+                busMarkers[busId].setMap(null);
+                delete busMarkers[busId];
+            }
+        }
+
+        // Update Fleet UI
+        updateAuthorityList(formattedBuses);
+
+        // Update ETA if a route is selected
+        if (selectedRouteId) {
+            // Re-trigger ETA calc if needed
+        }
+
+    } catch (error) {
+        console.warn("Polling Error (Is Backend Running?):", error.message);
     }
 }
-function toggleTheme() {
-    const isDark = document.documentElement.classList.contains('dark');
-    applyTheme(isDark ? 'light' : 'dark');
-    localStorage.setItem('theme', isDark ? 'light' : 'dark');
-}
 
-function initMap() {
-    map = new google.maps.Map(document.getElementById("map"), { center: { lat: 31.6339, lng: 74.8723 }, zoom: 13, disableDefaultUI: true });
-    infoWindow = new google.maps.InfoWindow();
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    applyTheme(savedTheme);
-    main();
-}
-window.initMap = initMap;
+// --- UI RENDERING ---
 
-// --- MARKER, ROUTE, and FLEET LOGIC ---
-function createBusIcon() {
-    const isDarkTheme = document.documentElement.classList.contains('dark');
-    return {
-        path: 'M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11C5.84 5 5.28 5.42 5.08 6.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z',
-        fillColor: '#ffe600ff', // Standard blue color for all buses
-        fillOpacity: 1,
-        strokeWeight: 1,
-        strokeColor: isDarkTheme ? '#1a202c' : '#ffffff',
-        rotation: 0,
-        scale: 1.2,
-        anchor: new google.maps.Point(12, 12),
-        labelOrigin: new google.maps.Point(12, 28)
-    };
-}
+function renderRouteListUI() {
+    const routeList = document.getElementById('route-list');
+    routeList.innerHTML = '';
 
-function updateBusMarker(busData) {
-    const latLng = { lat: busData.lat, lng: busData.lng };
-    if (busMarkers[busData.id]) {
-        busMarkers[busData.id].setPosition(latLng);
-        busMarkers[busData.id].setIcon(createBusIcon());
-        busMarkers[busData.id].set('busData', busData); 
-    } else {
-        const marker = new google.maps.Marker({
-            position: latLng,
-            map: map,
-            icon: createBusIcon(),
-            label: {
-                text: busData.id.replace('BUS-', ''),
-                color: 'white',
-                fontSize: '10px',
-                fontWeight: 'bold',
+    Object.entries(allRoutesData).forEach(([routeId, routeData]) => {
+        const routeElement = document.createElement('div');
+        routeElement.className = 'p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/50';
+        routeElement.id = `route-item-${routeId}`;
+        routeElement.innerHTML = `<p class="font-semibold text-gray-700 dark:text-gray-200">${routeData.routeName}</p><i class="fa-solid fa-chevron-right text-gray-400"></i>`;
+
+        routeElement.addEventListener('click', () => {
+            if (selectedRouteId === routeId) {
+                selectedRouteId = null;
+                clearRouteSelection();
+                clearStopMarkers();
+                document.getElementById('route-details-view').classList.add('hidden');
+            } else {
+                selectedRouteId = routeId;
+                highlightRoute(routeId);
+                showRouteDetails(routeId);
             }
         });
-        marker.set('busData', busData);
-        marker.addListener('click', () => {
-            const data = marker.get('busData');
-            const lastUpdated = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleTimeString() : 'Receiving...';
-            const content = `<div class="font-sans text-white"><p class="font-bold text-lg mb-1">${allRoutesData[data.routeId]?.routeName || data.routeId} (${data.id})</p><p class="text-xs mt-2 opacity-70">Last updated: ${lastUpdated}</p></div>`;
-            infoWindow.setContent(content);
-            infoWindow.open(map, marker);
-        });
-        busMarkers[busData.id] = marker;
-    }
+        routeList.appendChild(routeElement);
+    });
 }
 
 function updateAuthorityList(buses) {
     const busStatusList = document.getElementById('bus-status-list');
     busStatusList.innerHTML = '';
+
     if (buses.length === 0) {
-        busStatusList.innerHTML = `<div class="text-sm text-center text-gray-500 dark:text-gray-400 p-4">Waiting for bus data...</div>`;
+        busStatusList.innerHTML = `<div class="text-sm text-center text-gray-500 dark:text-gray-400 p-4">Waiting for bus data...<br><span class="text-xs">Ensure backend & simulator are running</span></div>`;
         return;
     }
-    buses.sort((a,b) => (a.id).localeCompare(b.id)).forEach(bus => {
+
+    buses.sort((a, b) => (a.id).localeCompare(b.id)).forEach(bus => {
         const busElement = document.createElement('div');
         busElement.className = `p-3 rounded-lg bg-gray-50/50 dark:bg-gray-700/50 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/50`;
         busElement.innerHTML = `
@@ -304,7 +282,10 @@ function updateAuthorityList(buses) {
                     <p class="font-bold text-gray-800 dark:text-white">${allRoutesData[bus.routeId]?.routeName || bus.routeId}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">${bus.id}</p>
                 </div>
-                <div class="w-3 h-3 rounded-full blinking" style="background-color: #3b82f6"></div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500">${Math.round(bus.speed || 0)} km/h</span>
+                    <div class="w-3 h-3 rounded-full blinking" style="background-color: #3b82f6"></div>
+                </div>
             </div>
         `;
         busElement.addEventListener('click', () => {
@@ -318,207 +299,246 @@ function updateAuthorityList(buses) {
     });
 }
 
-async function fetchAndDrawRoutes() {
-    const routesCol = collection(db, `/artifacts/${appId}/routes`);
-    const routeList = document.getElementById('route-list');
-    onSnapshot(routesCol, (snapshot) => {
-        Object.values(routePolylines).forEach(p => p.setMap(null));
-        routePolylines = {};
-        routeList.innerHTML = '';
-        allRoutesData = {};
-        snapshot.forEach(doc => {
-            const route = doc.data();
-            allRoutesData[doc.id] = route; 
-            if(route.path && route.path.length > 0) {
-                const latlngs = route.path.map(p => ({ lat: p.latitude, lng: p.longitude }));
-                const polyline = new google.maps.Polyline({ path: latlngs, geodesic: true, strokeColor: "#3b82f6", strokeOpacity: 0.6, strokeWeight: 5 });
-                polyline.setMap(map);
-                routePolylines[doc.id] = polyline;
-            }
-            const routeElement = document.createElement('div');
-            routeElement.className = 'p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/50';
-            routeElement.id = `route-item-${doc.id}`;
-            routeElement.innerHTML = `<p class="font-semibold text-gray-700 dark:text-gray-200">${route.routeName}</p><i class="fa-solid fa-chevron-right text-gray-400"></i>`;
-            routeElement.addEventListener('click', () => {
-                if (selectedRouteId === doc.id) {
-                    selectedRouteId = null;
-                    clearRouteSelection();
-                    clearStopMarkers();
-                    document.getElementById('route-details-view').classList.add('hidden');
-                } else {
-                    selectedRouteId = doc.id;
-                    highlightRoute(doc.id);
-                    fetchAndShowRouteDetails(doc.id);
-                }
-            });
-            routeList.appendChild(routeElement);
-        });
-    });
-}
+// --- MAP INTERACTION ---
 
-// --- ROUTE HIGHLIGHTING AND STOP DETAILS ---
 function highlightRoute(routeId) {
-    for (const id in routePolylines) {
-        routePolylines[id].setOptions({ strokeColor: '#3b82f6', strokeWeight: 5, strokeOpacity: 0.6, zIndex: 1 });
-    }
+    // Reset all lines
+    Object.values(routePolylines).forEach(p => p.setMap(null));
+
+    // Draw selected
     if (routePolylines[routeId]) {
-        routePolylines[routeId].setOptions({ strokeColor: '#1d4ed8', strokeWeight: 8, strokeOpacity: 1, zIndex: 10 });
+        routePolylines[routeId].setMap(map);
+        routePolylines[routeId].setOptions({ strokeColor: '#1d4ed8', strokeWeight: 6, strokeOpacity: 1, zIndex: 10 });
+
+        // Fit bounds
         const bounds = new google.maps.LatLngBounds();
         routePolylines[routeId].getPath().forEach(latLng => bounds.extend(latLng));
         map.fitBounds(bounds);
     }
+
+    // UI Highlight
     document.querySelectorAll('#route-list > div').forEach(el => el.classList.remove('selected-route'));
-    document.getElementById(`route-item-${routeId}`).classList.add('selected-route');
+    const item = document.getElementById(`route-item-${routeId}`);
+    if (item) item.classList.add('selected-route');
 }
 
 function clearRouteSelection() {
-    selectedRouteId = null;
-    for (const id in routePolylines) {
-        routePolylines[id].setOptions({ strokeColor: '#3b82f6', strokeWeight: 5, strokeOpacity: 0.6, zIndex: 1 });
-    }
+    Object.values(routePolylines).forEach(p => p.setMap(null));
     document.querySelectorAll('#route-list > div').forEach(el => el.classList.remove('selected-route'));
 }
 
-function clearStopMarkers() {
-    stopMarkers.forEach(marker => marker.setMap(null));
-    stopMarkers = [];
-}
-
-async function fetchAndShowRouteDetails(routeId) {
+function showRouteDetails(routeId) {
     clearStopMarkers();
-    const stopsCol = collection(db, `/artifacts/${appId}/routes/${routeId}/stops`);
-    const stopsSnapshot = await getDocs(query(stopsCol, orderBy("order")));
-    
+    const routeData = allRoutesData[routeId];
+    if (!routeData) return;
+
     const routeDetailsView = document.getElementById('route-details-view');
     const stopList = document.getElementById('stop-list');
     const routeDetailsTitle = document.getElementById('route-details-title');
-    
-    routeDetailsTitle.textContent = allRoutesData[routeId].routeName;
+
+    routeDetailsTitle.textContent = routeData.routeName;
     stopList.innerHTML = '';
     routeDetailsView.classList.remove('hidden');
 
-    const stops = [];
-    stopsSnapshot.forEach(doc => {
-        const stopData = doc.data();
-        stops.push({ id: doc.id, ...stopData });
+    routeData.stops.forEach((stop, index) => {
+        // Create Stop Marker
         const marker = new google.maps.Marker({
-            position: { lat: stopData.position.latitude, lng: stopData.position.longitude },
+            position: { lat: stop.lat, lng: stop.lng },
             map: map,
-            title: stopData.name,
-            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 6, fillColor: '#ffffff', fillOpacity: 1, strokeColor: '#3b82f6', strokeWeight: 3 }
+            title: stop.name,
+            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#ffffff', fillOpacity: 1, strokeColor: '#3b82f6', strokeWeight: 2 }
         });
         stopMarkers.push(marker);
+
+        // UI List Item
         const stopElement = document.createElement('div');
-        stopElement.id = `stop-item-${doc.id}`;
         stopElement.className = 'p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 flex justify-between items-center';
-        stopElement.innerHTML = `<p class="text-sm font-semibold text-gray-700 dark:text-gray-200">${stopData.name}</p><p id="eta-${doc.id}" class="text-xs font-bold text-blue-500">-- min</p>`;
+        stopElement.innerHTML = `<p class="text-sm font-semibold text-gray-700 dark:text-gray-200">${index + 1}. ${stop.name}</p>`;
         stopList.appendChild(stopElement);
     });
-    updateStopETAs(routeId, stops);
 }
 
-function updateStopETAs(routeId, stops) {
-    if (selectedRouteId !== routeId || !stops || stops.length === 0) return;
-    const activeBusesOnRoute = Object.values(busMarkers).filter(marker => marker.get('busData').routeId === routeId);
-    
-    stops.forEach((stop, stopIndex) => {
-        const etaElement = document.getElementById(`eta-${stop.id}`);
-        if (!etaElement) return;
+function updateBusMarker(busData) {
+    const latLng = { lat: busData.lat, lng: busData.lng };
 
-        let bestETA = Infinity;
-        let bestETAText = 'N/A';
-        const approachingBuses = activeBusesOnRoute.filter(bus => bus.get('busData').next_stop_index <= stopIndex + 1);
+    // Custom SVG Icon for Bus
+    const busIcon = {
+        path: 'M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11C5.84 5 5.28 5.42 5.08 6.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z',
+        fillColor: '#ffe600',
+        fillOpacity: 1,
+        strokeWeight: 1,
+        strokeColor: document.documentElement.classList.contains('dark') ? '#000' : '#fff',
+        scale: 1.2,
+        anchor: new google.maps.Point(12, 12)
+    };
 
-        if (approachingBuses.length === 0) {
-            etaElement.textContent = 'No upcoming buses';
-            return;
-        }
-
-        const distanceService = new google.maps.DistanceMatrixService();
-        const origins = approachingBuses.map(bus => bus.getPosition());
-        const destination = new google.maps.LatLng(stop.position.latitude, stop.position.longitude);
-
-        distanceService.getDistanceMatrix({ origins: origins, destinations: [destination], travelMode: 'DRIVING' }, (response, status) => {
-            if (status === 'OK') {
-                response.rows.forEach(row => {
-                    if (row.elements[0].status === 'OK') {
-                        const durationSeconds = row.elements[0].duration.value;
-                        if (durationSeconds < bestETA) {
-                            bestETA = durationSeconds;
-                            bestETAText = row.elements[0].duration.text;
-                        }
-                    }
-                });
-                etaElement.textContent = bestETAText;
-            }
+    if (busMarkers[busData.id]) {
+        busMarkers[busData.id].setPosition(latLng);
+        busMarkers[busData.id].setIcon(busIcon);
+        busMarkers[busData.id].set('busData', busData);
+    } else {
+        const marker = new google.maps.Marker({
+            position: latLng,
+            map: map,
+            icon: busIcon,
+            title: busData.id
         });
-    });
-}
+        marker.set('busData', busData);
 
-// --- MAIN APP LOGIC ---
-async function main() {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-
-    if (!db) return; 
-    try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-            await signInAnonymously(auth);
-        }
-
-        await fetchAllStopsAndPopulate();
-        setupStopInputListeners();
-        fetchAndDrawRoutes();
-
-        const busesCol = collection(db, `/artifacts/${appId}/buses`);
-        onSnapshot(busesCol, (snapshot) => {
-            const allBuses = [];
-            const activeBusIds = new Set();
-            snapshot.forEach(doc => {
-                const busData = { id: doc.id, ...doc.data() };
-                if (busData.lat && busData.lng) {
-                    updateBusMarker(busData);
-                    allBuses.push(busData);
-                    activeBusIds.add(busData.id);
-                }
-            });
-            for (const busId in busMarkers) {
-                if (!activeBusIds.has(busId)) {
-                    busMarkers[busId].setMap(null);
-                    delete busMarkers[busId];
-                }
-            }
-            updateAuthorityList(allBuses);
-            if (selectedRouteId) {
-                const stopListContainer = document.getElementById('stop-list');
-                if (stopListContainer.children.length > 0) {
-                    const stopsCol = collection(db, `/artifacts/${appId}/routes/${selectedRouteId}/stops`);
-                    getDocs(query(stopsCol, orderBy("order"))).then(stopsSnapshot => {
-                        const stops = [];
-                        stopsSnapshot.forEach(doc => stops.push({ id: doc.id, ...doc.data() }));
-                        updateStopETAs(selectedRouteId, stops);
-                    });
-                }
-            }
+        // Info Window Click
+        marker.addListener('click', () => {
+            const data = marker.get('busData');
+            const content = `
+                <div class="text-black">
+                    <p class="font-bold text-lg">${allRoutesData[data.routeId]?.routeName || data.routeId}</p>
+                    <p class="text-sm">ID: ${data.id}</p>
+                    <p class="text-xs text-gray-500">Speed: ${Math.round(data.speed || 0)} km/h</p>
+                </div>
+            `;
+            infoWindow.setContent(content);
+            infoWindow.open(map, marker);
         });
-    } catch (error) {
-        console.error("Authentication or Firestore error:", error);
+
+        busMarkers[busData.id] = marker;
     }
 }
 
-// --- LOAD GOOGLE MAPS SCRIPT ---
-(function(){
-    if (GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY !== "YOUR_GOOGLE_MAPS_API_KEY_HERE") {
+// --- FINDER LOGIC ---
+
+async function findAvailableBuses() {
+    const startInput = document.getElementById('start-location-input');
+    const endInput = document.getElementById('end-location-input');
+
+    finderResultsList.innerHTML = `<div class="flex justify-center p-4"><div class="spinner border-t-blue-500 border-4 w-6 h-6 rounded-full"></div></div>`;
+
+    const startStopName = startInput.value;
+    const endStopName = endInput.value;
+
+    if (!stopToRoutesMap.has(startStopName) || !stopToRoutesMap.has(endStopName)) {
+        finderResultsList.innerHTML = `<p class="text-red-500 text-sm text-center">Please select valid stops.</p>`;
+        return;
+    }
+
+    // Find routes that contain BOTH stops
+    const startRoutes = stopToRoutesMap.get(startStopName);
+    const endRoutes = stopToRoutesMap.get(endStopName);
+    const validRoutes = startRoutes.filter(routeId => endRoutes.includes(routeId));
+
+    if (validRoutes.length === 0) {
+        finderResultsList.innerHTML = `<p class="text-gray-500 text-sm text-center">No direct route found.</p>`;
+        return;
+    }
+
+    // Find active buses on those routes
+    const activeBuses = Object.values(busMarkers)
+        .map(m => m.get('busData'))
+        .filter(b => validRoutes.includes(b.routeId));
+
+    if (activeBuses.length === 0) {
+        finderResultsList.innerHTML = `<p class="text-gray-500 text-sm text-center">Route exists (${validRoutes.join(', ')}), but no buses active.</p>`;
+        return;
+    }
+
+    // Calculate ETAs using Client-Side Distance Matrix (Since backend doesn't have it yet)
+    const startStopDetails = allAvailableStops.find(s => s.name === startStopName);
+    const startLatLng = new google.maps.LatLng(startStopDetails.lat, startStopDetails.lng);
+
+    const service = new google.maps.DistanceMatrixService();
+    const origins = activeBuses.map(b => new google.maps.LatLng(b.lat, b.lng));
+
+    service.getDistanceMatrix({
+        origins: origins,
+        destinations: [startLatLng],
+        travelMode: 'DRIVING'
+    }, (response, status) => {
+        finderResultsList.innerHTML = '';
+        if (status === 'OK') {
+            const results = [];
+            response.rows.forEach((row, i) => {
+                if (row.elements[0].status === 'OK') {
+                    results.push({
+                        bus: activeBuses[i],
+                        duration: row.elements[0].duration.text,
+                        seconds: row.elements[0].duration.value
+                    });
+                }
+            });
+
+            results.sort((a, b) => a.seconds - b.seconds);
+
+            results.forEach(res => {
+                const el = document.createElement('div');
+                el.className = 'p-3 rounded-lg bg-gray-50/50 dark:bg-gray-700/50 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/50 flex justify-between items-center';
+                el.innerHTML = `
+                    <div>
+                        <p class="font-bold text-gray-800 dark:text-white">${allRoutesData[res.bus.routeId].routeName}</p>
+                        <p class="text-xs text-gray-500">Bus: ${res.bus.id}</p>
+                    </div>
+                    <p class="text-sm font-semibold text-green-500">${res.duration}</p>
+                `;
+                el.addEventListener('click', () => {
+                    const marker = busMarkers[res.bus.id];
+                    if (marker) {
+                        map.panTo(marker.getPosition());
+                        google.maps.event.trigger(marker, 'click');
+                    }
+                });
+                finderResultsList.appendChild(el);
+            });
+        }
+    });
+}
+
+function setupStopInputListeners() {
+    // Basic datalist filtering handled by browser
+}
+
+// --- THEMING & MAP SETUP ---
+
+function toggleTheme() {
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+        if (map) map.setOptions({ styles: lightMapStyle });
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+        if (map) map.setOptions({ styles: darkMapStyle });
+    }
+}
+
+function initMap() {
+    map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 31.6339, lng: 74.8723 },
+        zoom: 13,
+        disableDefaultUI: true
+    });
+    infoWindow = new google.maps.InfoWindow();
+
+    // Apply saved theme
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        map.setOptions({ styles: darkMapStyle });
+    } else {
+        map.setOptions({ styles: lightMapStyle });
+    }
+
+    main();
+}
+
+window.initMap = initMap;
+
+// Dynamic Script Load (To prevent exposing key in HTML if needed, though strictly client side)
+(function () {
+    if (GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY !== "YOUR_KEY_HERE") {
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap&libraries=geometry,places&v=weekly`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap&libraries=geometry,places`;
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
     } else {
-        document.getElementById('map').innerHTML = `<div class="flex items-center justify-center h-full bg-red-100 text-red-800 p-4 text-center"><div><h2 class="text-xl font-bold mb-2">Google Maps API Key Missing</h2><p>Please provide a valid API key in app.js to load the map.</p></div></div>`;
+        alert("Please set GOOGLE_MAPS_API_KEY in app.js");
     }
 })();
-
