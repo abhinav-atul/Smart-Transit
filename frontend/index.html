@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Transit Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="header">
+            <h2>🚌 Live Transit</h2>
+            <p>Route Monitor</p>
+        </div>
+        
+        <div id="bus-info" class="card hidden">
+            <h3 id="bus-id">Select a Bus</h3>
+            <div class="status-row">
+                <span class="label">Route:</span>
+                <span id="route-name" class="value">--</span>
+            </div>
+            
+            <hr>
+
+            <div class="metric">
+                <span class="label">Next Stop</span>
+                <div id="next-stop" class="value-large">--</div>
+            </div>
+
+            <div class="metric">
+                <span class="label">ETA</span>
+                <div id="eta-time" class="value-highlight">-- min</div>
+                <div id="eta-status" class="sub-text">--</div>
+            </div>
+
+            <div class="metric">
+                <span class="label">Crowd Density</span>
+                <div id="crowd-level" class="badge">--</div>
+                <div id="crowd-count" class="sub-text">-- passengers</div>
+            </div>
+        </div>
+        
+        <div class="placeholder" id="placeholder">
+            Click on a bus marker to view live details.
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

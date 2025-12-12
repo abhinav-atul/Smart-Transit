@@ -1,0 +1,51 @@
+body { margin: 0; padding: 0; display: flex; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+
+#map { height: 100%; width: 75%; flex-grow: 1; }
+
+.sidebar {
+    width: 350px;
+    background: #f8f9fa;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.header h2 { margin: 0; color: #1a1a1a; }
+.header p { margin: 5px 0 20px 0; color: #666; font-size: 0.9em; }
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.hidden { display: none; }
+
+.metric { margin-bottom: 15px; }
+.label { font-size: 0.8em; text-transform: uppercase; color: #888; font-weight: 600; display: block; margin-bottom: 4px; }
+.value-large { font-size: 1.2em; font-weight: 600; color: #333; }
+.value-highlight { font-size: 2em; font-weight: 700; color: #2563eb; }
+.sub-text { font-size: 0.85em; color: #666; }
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9em;
+    background: #eee;
+    color: #333;
+}
+
+/* Dynamic Colors */
+.bg-green { background: #dcfce7; color: #166534; }
+.bg-orange { background: #ffedd5; color: #9a3412; }
+.bg-red { background: #fee2e2; color: #991b1b; }
+
+.placeholder { text-align: center; color: #999; margin-top: 50px; font-style: italic; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

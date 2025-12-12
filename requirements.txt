@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+requests
+numpy
+opencv-python-headless
+pydantic
+redis
+sqlalchemy
+psycopg2-binary

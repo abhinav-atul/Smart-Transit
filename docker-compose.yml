@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Main API Application
+  api:
+    build: .
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - db
+
+  # Redis for Caching ETA
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  # PostgreSQL for Structured Data
+  db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: smart_transit
+    ports:
+      - "5432:5432"
