@@ -20,7 +20,7 @@ app.add_middleware(
 )
 
 # Database Connection String (Matches docker-compose.yml)
-DB_DSN = "postgresql://user:password@localhost:5432/transit_db"
+DB_DSN = "postgresql://user@localhost:5433/transit_db"
 
 # --- DATA MODELS ---
 

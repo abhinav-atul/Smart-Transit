@@ -1,15 +1,10 @@
-version: '3.8'
 services:
   db:
     image: timescale/timescaledb:latest-pg14
     environment:
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_USER=user
-      - POSTGRES_DB=transit_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: secretpass123
+      POSTGRES_DB: transit_db
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "5432:5432"
-
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
+      - "5433:5432"

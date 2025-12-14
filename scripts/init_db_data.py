@@ -4,8 +4,10 @@ import asyncpg
 import os
 
 # --- CONFIGURATION ---
-DB_DSN = "postgresql://user:password@localhost:5432/transit_db"
-CONFIG_FILE = "config.json"
+# DB_DSN updated to use 127.0.0.1 for better Docker compatibility
+DB_DSN = "postgresql://user@localhost:5433/transit_db"
+# CONFIG_FILE path corrected to relative location
+CONFIG_FILE = "simulation/data/config.json"
 
 async def populate_database():
     print(f"📂 Loading data from {CONFIG_FILE}...")
@@ -18,17 +20,34 @@ async def populate_database():
     with open(CONFIG_FILE, 'r') as f:
         config = json.load(f)
 
+    # 2. Connection Logic with Asynchronous Retry (FIX for "Connection refused")
     print("🔌 Connecting to Database...")
-    try:
-        # Connect to PostgreSQL
-        conn = await asyncpg.connect(DB_DSN)
-    except Exception as e:
-        print(f"❌ Connection failed: {e}")
-        print("   (Make sure 'docker-compose up' is running)")
-        return
+    conn = None
+    max_retries = 10
+    retry_delay = 3
+
+    for i in range(max_retries):
+        try:
+            print(f"   Attempt {i + 1}/{max_retries}...")
+            # Connect to PostgreSQL
+            conn = await asyncpg.connect(DB_DSN)
+            print("   Connection established!")
+            break  # Connection successful, exit the retry loop
+        except Exception as e:
+            if i < max_retries - 1:
+                print(f"❌ Connection failed: {e}. Retrying in {retry_delay}s...")
+                await asyncio.sleep(retry_delay)
+            else:
+                print(f"❌ Connection failed after {max_retries} attempts: {e}")
+                print("   (Make sure 'docker-compose up' is running and Docker is running)")
+                return # Exit the function if all retries fail
+
+    if conn is None:
+        return # Could not establish connection
 
     print("🚀 Inserting Routes and Stops...")
     
+    # 3. Insertion Logic
     try:
         # Start a transaction to ensure all or nothing
         async with conn.transaction():
@@ -38,7 +57,6 @@ async def populate_database():
                 route_name = route_data['routeName']
                 
                 # A. Insert Route
-                # ON CONFLICT DO NOTHING prevents errors if you run this script twice
                 await conn.execute("""
                     INSERT INTO routes (route_id, route_name) 
                     VALUES ($1, $2)
@@ -55,9 +73,6 @@ async def populate_database():
                     lat = stop['coords'][0]
                     lng = stop['coords'][1]
                     
-                    # We treat (route_id, stop_sequence) as a unique constraint logically
-                    # but for simplicity, we just insert. 
-                    # Note: Ideally, clear old stops for this route first if updating.
                     await conn.execute("""
                         INSERT INTO stops (route_id, stop_name, latitude, longitude, stop_sequence)
                         VALUES ($1, $2, $3, $4, $5)
@@ -69,7 +84,8 @@ async def populate_database():
         print(f"\n❌ Database Error: {e}")
     
     finally:
-        await conn.close()
+        if conn:
+            await conn.close()
 
 if __name__ == "__main__":
     # Python 3.7+ approach to running async main
