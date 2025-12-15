@@ -1,7 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any
 import base64
 
 class FaceValidator:
@@ -43,7 +43,7 @@ class FaceValidator:
             return True, len(results.detections)
         return False, 0
     
-    def analyze_crowd(self, frame) -> Dict[str, any]:
+    def analyze_crowd(self, frame) -> Dict[str, Any]:
         """
         Analyze crowd density from camera frame.
         
@@ -74,7 +74,7 @@ class FaceValidator:
             "confidence": 0.85 if faces_found else 0.0
         }
     
-    def process_image_from_bytes(self, image_bytes: bytes) -> Dict[str, any]:
+    def process_image_from_bytes(self, image_bytes: bytes) -> Dict[str, Any]:
         """
         Process image from raw bytes.
         
@@ -98,7 +98,7 @@ class FaceValidator:
         
         return self.analyze_crowd(frame)
     
-    def process_image_from_base64(self, base64_string: str) -> Dict[str, any]:
+    def process_image_from_base64(self, base64_string: str) -> Dict[str, Any]:
         """
         Process image from base64 encoded string.
         
