@@ -1,6 +1,15 @@
 # 🚍 Smart Transit System
 
-A real-time intelligent transit navigation system featuring live bus tracking, route optimization, and a modern dashboard. This project uses a **FastAPI** backend, **Vanilla JavaScript** frontend, and **TimescaleDB (PostgreSQL)** for time-series data storage.
+A real-time intelligent transit navigation system featuring live bus tracking, route optimization, **crowd analysis**, and a modern dashboard. This project uses a **FastAPI** backend, **Vanilla JavaScript** frontend, and **TimescaleDB (PostgreSQL)** for time-series data storage.
+
+## ✨ Features
+
+* **Live Bus Tracking** - Real-time GPS tracking of all buses on the map
+* **Route Optimization** - Find the best route between any two stops
+* **Crowd Analysis** 🆕 - Real-time passenger count and crowd density monitoring using face detection
+* **Fleet Management** - Monitor all active buses with speed and status indicators
+* **Modern UI** - Responsive dark/light theme with smooth animations
+* **Time-Series Data** - Efficient storage and querying using TimescaleDB
 
 ---
 
@@ -78,7 +87,9 @@ python scripts/init_db_data.py
 
 ---
 
-## 🚀 How to Run (3-Terminal Setup)
+## 🚀 How to Run
+
+### Basic Setup (3-Terminal Setup)
 
 You need to run three separate processes simultaneously. Open **three terminal windows** in the project root folder.
 
@@ -86,7 +97,7 @@ You need to run three separate processes simultaneously. Open **three terminal w
 
 ### 🖥️ Terminal 1: Backend API
 
-This server handles GPS pings and serves data to the frontend.
+This server handles GPS pings, crowd status, and serves data to the frontend.
 
 ```bash
 uvicorn backend.app.main_old:app --reload --port 8000
@@ -127,6 +138,29 @@ The application will automatically open in your browser.
 
 ---
 
+### 🎥 Optional: Camera Simulator (Crowd Analysis)
+
+To enable real-time crowd analysis and passenger counting, run the camera simulator in a **4th terminal**:
+
+```bash
+python hardware/face_detection/camera_simulator.py BUS-01 10
+```
+
+This will:
+- Simulate camera captures every 10 seconds
+- Analyze crowd density using face detection
+- Send passenger counts to the backend
+- Display crowd status in the frontend (Low/Medium/High)
+
+**For real camera:**
+```bash
+python hardware/face_detection/camera_simulator.py BUS-01 10 --camera
+```
+
+See [TESTING_CROWD_ANALYSIS.md](TESTING_CROWD_ANALYSIS.md) for detailed testing instructions.
+
+---
+
 ## 🌍 Access the Application
 
 Open your web browser and visit:
@@ -137,7 +171,10 @@ Open your web browser and visit:
 
 * **Finder View:** Search for a stop to find the nearest bus
 * **Routes View:** Click a route (e.g., AS-1) to see its path and stops on the map
-* **Fleet View:** Monitor real-time statuses of all active buses
+* **Fleet View:** Monitor real-time statuses of all active buses with crowd indicators 🆕
+  - Color-coded crowd status badges (Green/Yellow/Red)
+  - Real-time passenger counts
+  - Live bus locations and speeds
 
 ---
 
@@ -147,18 +184,26 @@ Open your web browser and visit:
 Smart-Transit/
 ├── backend/
 │   └── app/
-│       ├── main_old.py        # Main API Server
-│       └── db/schema.sql     # Database Structure
+│       ├── main_old.py        # Main API Server (with crowd status endpoints)
+│       └── db/schema.sql     # Database Structure (with crowd_status field)
 ├── frontend/
 │   ├── index.html             # Main User Interface
 │   └── assets/                # JS Logic & CSS Styles
+├── hardware/
+│   └── face_detection/       # 🆕 Crowd Analysis Module
+│       ├── detect.py         # Face detection & crowd analysis
+│       ├── camera_simulator.py # Camera simulation script
+│       └── README.md         # Face detection documentation
 ├── simulation/
 │   ├── bus_simulator.py       # GPS Simulation Script
 │   └── data/config.json       # Route & Stop Definitions
 ├── scripts/
-│   ├── setup_tables.py        # Create a Setup Script
-│   └── init_db_data.py        # Data Seeding Script
-└── docker-compose.yml         # DB Container Configuration
+│   ├── setup_tables.py        # Database Setup Script
+│   ├── init_db_data.py        # Data Seeding Script
+│   ├── migrate_crowd_status.py # 🆕 Database migration for crowd status
+│   └── test_face_detection.py # 🆕 Face detection tests
+├── docker-compose.yml         # DB Container Configuration
+└── TESTING_CROWD_ANALYSIS.md # 🆕 Crowd analysis testing guide
 ```
 
 ---
