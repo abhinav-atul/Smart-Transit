@@ -1,210 +1,103 @@
-<<<<<<< HEAD:style.css
-/* --- Enhanced Liquid Glass + Neon Design System --- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Smooth gradient animation */
-@keyframes gradient-animation {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
+/* --- Color System --- */
+:root {
+  --glass-bg: rgba(30, 41, 59, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
-/* Dynamic background */
-body {
-  background: linear-gradient(-45deg, #ff6b6b, #ff0080, #4f9eff, #23d5ab, #ffd93d);
-  background-size: 500% 500%;
-  animation: gradient-animation 18s ease infinite;
-  font-family: 'Inter', sans-serif;
-  color: white;
-  overflow: hidden;
+body { font-family: 'Inter', sans-serif; }
+
+/* --- Glass Card --- */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
-/* Full-screen map container */
-#map {
-  height: 100vh;
-  width: 100%;
-  z-index: 5;
-  cursor: default;
-  background-color: transparent;
-  transition: filter 0.4s ease;
+/* Light Mode Overrides (Clean Corporate Look) */
+html:not(.dark) .glass-card {
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-border: rgba(226, 232, 240, 0.8); /* Slate-200 */
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1); /* Soft shadow */
 }
 
-/* Map blur on overlay open */
-.map-blur {
-  filter: blur(6px) brightness(0.8);
+/* --- Components --- */
+
+/* Tabs */
+.tab-btn {
+  /* Use Flexbox to center icon and text, and Gap to separate them */
+  @apply flex items-center justify-center gap-2 py-2.5 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-500 dark:text-slate-400;
 }
 
-/* Selected route styling */
-.selected-route {
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
-  color: #fff !important;
-  box-shadow: 0px 0px 12px rgba(59, 130, 246, 0.8);
-  border-radius: 12px;
-  transition: all 0.3s ease-in-out;
+.tab-btn:hover {
+  @apply text-slate-700 bg-slate-200 dark:text-white dark:bg-white/5;
 }
 
-.selected-route:hover {
-  transform: scale(1.03);
-  box-shadow: 0 0 18px rgba(59, 130, 246, 1);
+.tab-btn.active {
+  @apply bg-white text-blue-600 shadow-sm ring-1 ring-black/5 dark:bg-brand-600 dark:text-white dark:ring-0 dark:shadow-brand-500/20;
 }
 
-.selected-route p,
-.selected-route i {
-  color: #fff !important;
+/* Inputs */
+.input-field {
+  @apply w-full rounded-xl py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-brand-500/50
+  bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400
+  dark:bg-black/20 dark:border-white/5 dark:text-white dark:placeholder-slate-500;
 }
 
-/* Glass panel enhanced */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(22px) saturate(170%);
-  -webkit-backdrop-filter: blur(22px) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 18px;
-  padding: 1rem;
-  transition: all 0.35s ease;
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.4);
+/* Primary Button */
+.action-btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all active:scale-95
+  dark:bg-gradient-to-r dark:from-blue-600 dark:to-indigo-600 dark:shadow-blue-900/20;
 }
 
-/* Glass hover effect */
-.glass-panel:hover {
-  background: rgba(255, 255, 255, 0.16);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(31, 38, 135, 0.55);
+/* Icon Button */
+.icon-btn {
+  @apply w-9 h-9 rounded-full flex items-center justify-center transition-colors
+  text-slate-500 hover:bg-slate-100 hover:text-slate-900
+  dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white;
 }
 
-/* Dark mode variant */
-.dark .glass-panel {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Map Button */
+.map-control-btn {
+  @apply w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-xl transition-all cursor-pointer active:scale-95
+  bg-white text-blue-600 border border-slate-100 hover:bg-slate-50
+  dark:glass-card dark:text-blue-500 dark:border-white/10 dark:hover:bg-white/5;
 }
 
-/* Neon blinking */
-.blinking {
-  animation: blinker 1.5s linear infinite;
+/* --- Map & Animation --- */
+.pulse-ring {
+    animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+    100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
 }
 
-@keyframes blinker {
-  50% {
-    opacity: 0.2;
-  }
+/* Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { 
+  @apply bg-slate-300 dark:bg-white/10 rounded-full;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { 
+  @apply bg-slate-400 dark:bg-white/20;
 }
 
-/* Smooth spinner */
-.spinner {
-  animation: spin 1s linear infinite;
+/* Fade In */
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
+.animate-enter { animation: fadeInScale 0.2s ease-out forwards; }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+/* Hide Leaflet Attribution (Optional cleanup) */
+.leaflet-control-attribution {
+  opacity: 0.6;
+  font-size: 10px !important;
 }
-
-/* --- Google Maps InfoWindow Styling Enhanced --- */
-
-.gm-style .gm-style-iw-c {
-  background: rgba(15, 23, 42, 0.85) !important;
-  backdrop-filter: blur(15px) saturate(180%);
-  -webkit-backdrop-filter: blur(15px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 15px !important;
-  padding: 1rem !important;
-  box-shadow: 0px 8px 35px rgba(0, 0, 0, 0.6);
-  color: #f8fafc;
-}
-
-/* Text inside InfoWindow */
-.gm-style .gm-style-iw-d {
-  overflow: hidden !important;
-  color: #e2e8f0 !important;
-  font-size: 0.95rem;
-}
-
-/* Tail of the InfoWindow */
-.gm-style .gm-style-iw-t::after {
-  background: rgba(15, 23, 42, 0.85) !important;
-  border: none !important;
-}
-
-/* Button / List hover enhancement */
-.list-item {
-  transition: all 0.25s ease;
-}
-
-.list-item:hover {
-  background: rgba(255, 255, 255, 0.18);
-  transform: translateX(4px);
-  border-radius: 10px;
-}
-=======
-/* --- Liquid Glass Design System --- */
-@keyframes gradient-animation {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-body {
-  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-  background-size: 400% 400%;
-  animation: gradient-animation 15s ease infinite;
-}
-
-#map { 
-  height: 100vh; 
-  width: 100%; 
-  z-index: 10; 
-  cursor: default; 
-  background-color: transparent;
-}
-.selected-route {
-  background-color: #3b82f6 !important;
-  color: white !important;
-}
-
-.selected-route p, .selected-route i {
-    color: white !important;
-}
-.glass-panel {
-  background: rgba(255, 255, 255, 0.1);
-  -webkit-backdrop-filter: blur(25px);
-  backdrop-filter: blur(25px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-}
-
-.dark .glass-panel {
-  background: rgba(26, 32, 44, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.blinking { animation: blinker 1.5s linear infinite; }
-@keyframes blinker { 50% { opacity: 0.3; } }
-
-.spinner { animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-/* Custom styling for the Google Maps InfoWindow */
-.gm-style .gm-style-iw-c {
-  background-color: rgba(26, 32, 44, 0.8) !important;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px !important;
-  padding: 1rem !important;
-}
-.gm-style .gm-style-iw-d { overflow: hidden !important; color: white; }
-.gm-style .gm-style-iw-t::after { background: rgba(26, 32, 44, 0.8) !important; }
-
->>>>>>> 8a26ab20e5930e3d4002ab0aa12ff7ec8dcb1780:frontend/assets/style.css

@@ -1,538 +1,476 @@
 // --- CONFIGURATION ---
-// The URL of your Python/FastAPI Backend
 const API_BASE_URL = "http://localhost:8000";
-const GOOGLE_MAPS_API_KEY = "AIzaSyDec5RO1JPrJdX0X5ntqupEU8RQ8rxDiwM"; // Replace if needed
+const BUS_ICON_URL = "https://img.icons8.com/?size=100&id=15158&format=png&color=000000";
 
-// --- GOOGLE MAPS STYLES ---
-const lightMapStyle = [{ elementType: "geometry", stylers: [{ color: "#f5f5f5" }] }, { elementType: "labels.icon", stylers: [{ visibility: "off" }] }, { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] }, { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] }, { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] }, { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] }, { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] }, { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] }, { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }, { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] }, { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] }, { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] }, { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] }, { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }, { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] }, { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#eeeeee" }] }, { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] }, { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] }];
-const darkMapStyle = [{ elementType: "geometry", stylers: [{ color: "#242f3e" }] }, { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] }, { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }, { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] }, { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] }, { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] }, { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#6b9a76" }] }, { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] }, { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] }, { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] }, { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] }, { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] }, { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] }, { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] }, { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] }, { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }, { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] }, { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] }];
+const TILE_LAYERS = {
+    dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+};
 
-// --- APP GLOBALS ---
-let map, infoWindow;
-let busMarkers = {};     // Object to store Google Maps Markers by Bus ID
-let routePolylines = {}; // Object to store Polylines by Route ID
-let stopMarkers = [];    // Array of stop markers for the selected route
-let selectedRouteId = null;
-
-// Data Stores
-let allRoutesData = {};   // { "AS-1": { routeName: "...", stops: [...] }, ... }
+// --- GLOBALS ---
+let map;
+let currentTileLayer = null;
+let busMarkers = {};        
+let routePolylines = {};    
+let stopMarkers = [];       
+let userLocationMarker = null;
+let markerAnimFrames = {}; 
+let allRoutesData = {};
 let allAvailableStops = []; // Array of { name, lat, lng }
-let stopToRoutesMap = new Map(); // Map<StopName, [RouteID]>
+let stopToRoutesMap = new Map();
+let selectedRouteId = null;
+let selectedBusId = null;
 
 // --- DOM ELEMENTS ---
-const finderViewBtn = document.getElementById('finder-view-btn');
-const commuterViewBtn = document.getElementById('commuter-view-btn');
-const authorityViewBtn = document.getElementById('authority-view-btn');
+const finderBtn = document.getElementById('finder-view-btn');
+const commuterBtn = document.getElementById('commuter-view-btn');
+const authorityBtn = document.getElementById('authority-view-btn');
 const finderView = document.getElementById('finder-view');
 const commuterView = document.getElementById('commuter-view');
 const authorityView = document.getElementById('authority-view');
+
+const startInput = document.getElementById('start-location-input');
+const endInput = document.getElementById('end-location-input');
+const clearStartBtn = document.getElementById('clear-start-btn');
+const clearEndBtn = document.getElementById('clear-end-btn');
+const swapBtn = document.getElementById('swap-locations-btn');
 const findBusesBtn = document.getElementById('find-buses-btn');
-const themeToggleBtn = document.getElementById('theme-toggle-btn');
-const togglePanelBtn = document.getElementById('toggle-panel-btn');
-const panelContent = document.getElementById('panel-content');
-const sosBtn = document.getElementById('sos-btn');
-const sosModal = document.getElementById('sos-modal');
-const closeSosModalBtn = document.getElementById('close-sos-modal-btn');
 const finderResultsList = document.getElementById('finder-results-list');
 
-// --- EVENT LISTENERS ---
-finderViewBtn.addEventListener('click', () => switchView('finder'));
-commuterViewBtn.addEventListener('click', () => switchView('commuter'));
-authorityViewBtn.addEventListener('click', () => switchView('authority'));
-findBusesBtn.addEventListener('click', findAvailableBuses);
-themeToggleBtn.addEventListener('click', toggleTheme);
-togglePanelBtn.addEventListener('click', () => panelContent.classList.toggle('hidden'));
-sosBtn.addEventListener('click', () => sosModal.classList.remove('hidden'));
-closeSosModalBtn.addEventListener('click', () => sosModal.classList.add('hidden'));
+const routeList = document.getElementById('route-list');
+const busStatusList = document.getElementById('bus-status-list');
 
-// --- VIEW SWITCHING LOGIC ---
-function switchView(view) {
-    const views = { finder: finderView, commuter: commuterView, authority: authorityView };
-    const buttons = { finder: finderViewBtn, commuter: commuterViewBtn, authority: authorityViewBtn };
+const selectedBusCard = document.getElementById('selected-bus-card');
+const busDetailId = document.getElementById('bus-detail-id');
+const busDetailSpeed = document.getElementById('bus-detail-speed');
+const busDetailNextStop = document.getElementById('bus-detail-next-stop');
+const busDetailEta = document.getElementById('bus-detail-eta');
 
-    // Hide all views
-    Object.values(views).forEach(v => v.classList.add('hidden'));
+const sosModal = document.getElementById('sos-modal');
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
+const userLocBtn = document.getElementById('user-location-btn');
+const stopsDatalist = document.getElementById('stops-datalist');
 
-    // Reset all buttons
-    Object.values(buttons).forEach(b => {
-        b.classList.remove('bg-blue-600', 'text-white', 'shadow');
-        b.classList.add('text-gray-600', 'dark:text-gray-300');
-    });
-
-    // Activate selected view
-    views[view].classList.remove('hidden');
-    buttons[view].classList.add('bg-blue-600', 'text-white', 'shadow');
-    buttons[view].classList.remove('text-gray-600', 'dark:text-gray-300');
-}
 
 // --- INITIALIZATION ---
-async function main() {
-    try {
-        console.log("Initializing App...");
-
-        // 1. Fetch Static Data (Routes & Stops)
-        // Note: For now, we simulate fetching full route details. 
-        // In a full implementation, you would have a GET /routes endpoint.
-        await fetchAndProcessStaticData();
-
-        // 2. Setup Input Listeners for Finder
-        setupStopInputListeners();
-
-        // 3. Start Live Polling (The Heart of the System)
-        setInterval(fetchLiveBusData, 2000); // Poll every 2 seconds
-
-        // Initial Fetch
-        fetchLiveBusData();
-
-    } catch (error) {
-        console.error("Initialization Error:", error);
-    }
+function initMap() {
+    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([31.6339, 74.8723], 13);
+    const isDark = document.documentElement.classList.contains('dark');
+    setMapTheme(isDark ? 'dark' : 'light');
+    main();
 }
 
-// --- DATA FETCHING ---
+async function main() {
+    await fetchAndProcessStaticData();
+    setInterval(fetchLiveBusData, 2000); 
+    fetchLiveBusData(); 
+}
 
-/**
- * Fetches static route configuration (Paths, Stops)
- * Since the backend mainly stores logs, we reconstruct the static map data here
- * or fetch from a dedicated endpoint if available.
- */
+// --- THEME ---
+themeToggleBtn.addEventListener('click', () => {
+    const html = document.documentElement;
+    const isDark = html.classList.toggle('dark');
+    setMapTheme(isDark ? 'dark' : 'light');
+    themeToggleBtn.querySelector('i').className = isDark ? 'fa-solid fa-moon' : 'fa-solid fa-sun text-yellow-500';
+});
+
+function setMapTheme(theme) {
+    if (currentTileLayer) map.removeLayer(currentTileLayer);
+    currentTileLayer = L.tileLayer(TILE_LAYERS[theme], {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        subdomains: 'abcd', maxZoom: 20
+    }).addTo(map);
+}
+
+// --- DATA ---
 async function fetchAndProcessStaticData() {
     try {
-        console.log("Fetching static route data from API...");
-        
-        // 1. Fetch data from the live backend API
         const response = await fetch(`${API_BASE_URL}/routes`);
-        
-        // Check if the API call was successful
-        if (!response.ok) {
-             throw new Error(`HTTP error! Status: ${response.status}. Is API running on port 8000?`);
-        }
-        
-        // The API returns an object like: { "routes": { "AS-1": { ... } } }
-        const data = await response.json(); 
-
-        // 2. Assign the real data to the global variable
-        allRoutesData = data.routes; 
-        
-        // 3. Process and render the real data
+        if (!response.ok) throw new Error("API Offline");
+        const data = await response.json();
+        allRoutesData = data.routes;
         processRouteDataForUI();
         renderRouteListUI();
-        
-        console.log("✅ Routes loaded successfully from API.");
-
     } catch (e) {
-        console.error("Failed to load static route data:", e);
-        // Fallback UI to alert user
-        const routeList = document.getElementById('route-list');
-        if(routeList) {
-             routeList.innerHTML = `<div class="text-sm text-center text-red-500 p-4">Error loading routes. Check console for details.</div>`;
-        }
+        routeList.innerHTML = `<div class="p-4 rounded-xl bg-red-50 text-red-600 text-sm">Failed to load routes.</div>`;
     }
 }
 
 function processRouteDataForUI() {
-    allAvailableStops = [];
+    stopsDatalist.innerHTML = '';
+    allAvailableStops = []; // Reset global stops array
     stopToRoutesMap = new Map();
-    const uniqueStops = new Set();
 
     Object.entries(allRoutesData).forEach(([routeId, routeData]) => {
-        // Draw Route Polyline (Simplified straight lines for prototype)
         if (routeData.stops.length > 1) {
-            const pathCoords = routeData.stops.map(s => ({ lat: s.lat, lng: s.lng }));
-            const polyline = new google.maps.Polyline({
-                path: pathCoords,
-                geodesic: true,
-                strokeColor: "#3b82f6",
-                strokeOpacity: 0.6,
-                strokeWeight: 5
+            const pathCoords = routeData.stops.map(s => [s.lat, s.lng]);
+            routePolylines[routeId] = L.polyline(pathCoords, { color: '#3b82f6', weight: 5, opacity: 0.8 });
+            
+            fetchRouteShape(routeData.stops).then(latLngs => {
+                if (latLngs && routePolylines[routeId]) routePolylines[routeId].setLatLngs(latLngs);
             });
-            // Don't set map yet, only when highlighted
-            routePolylines[routeId] = polyline;
         }
-
-        // Process Stops
         routeData.stops.forEach(stop => {
-            if (!uniqueStops.has(stop.name)) {
-                uniqueStops.add(stop.name);
-                allAvailableStops.push({ name: stop.name, lat: stop.lat, lng: stop.lng });
-            }
             if (!stopToRoutesMap.has(stop.name)) {
+                allAvailableStops.push({ name: stop.name, lat: stop.lat, lng: stop.lng }); // Store for ETA calc
+                
+                const option = document.createElement('option');
+                option.value = stop.name;
+                stopsDatalist.appendChild(option);
                 stopToRoutesMap.set(stop.name, []);
             }
             stopToRoutesMap.get(stop.name).push(routeId);
         });
     });
-
-    // Populate Datalist
-    const datalist = document.getElementById('stops-datalist');
-    if (datalist) {
-        datalist.innerHTML = '';
-        allAvailableStops.forEach(stop => {
-            const option = document.createElement('option');
-            option.value = stop.name;
-            datalist.appendChild(option);
-        });
-    }
 }
 
-/**
- * Polls the backend for live bus positions
- */
+async function fetchRouteShape(stops) {
+    if (!stops || stops.length < 2) return null;
+    const coordinates = stops.map(s => `${s.lng},${s.lat}`).join(';');
+    try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.routes?.[0]) return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        }
+    } catch (e) {}
+    return null;
+}
+
 async function fetchLiveBusData() {
     try {
-        const response = await fetch(`${API_BASE_URL}/buses/live`);
-        if (!response.ok) throw new Error("API Offline");
-
-        const liveBuses = await response.json();
-
+        const res = await fetch(`${API_BASE_URL}/buses/live`);
+        if (!res.ok) return;
+        const liveBuses = await res.json();
         const activeBusIds = new Set();
         const formattedBuses = [];
 
         liveBuses.forEach(bus => {
-            // Backend returns: { vehicle_id, route_id, lat, lng, speed }
-            const busData = {
-                id: bus.vehicle_id,
-                routeId: bus.route_id,
-                lat: bus.lat,
-                lng: bus.lng,
-                speed: bus.speed,
-                timestamp: new Date()
-            };
-
+            const busData = { id: bus.vehicle_id, routeId: bus.route_id, lat: bus.lat, lng: bus.lng, speed: bus.speed };
             updateBusMarker(busData);
             activeBusIds.add(busData.id);
             formattedBuses.push(busData);
         });
 
-        // Cleanup Ghost Buses
         for (const busId in busMarkers) {
             if (!activeBusIds.has(busId)) {
-                busMarkers[busId].setMap(null);
+                map.removeLayer(busMarkers[busId]);
                 delete busMarkers[busId];
             }
         }
-
-        // Update Fleet UI
         updateAuthorityList(formattedBuses);
+    } catch (e) {}
+}
 
-        // Update ETA if a route is selected
-        if (selectedRouteId) {
-            // Re-trigger ETA calc if needed
+// --- BUS SELECTION LOGIC ---
+
+function selectBus(busData) {
+    selectedBusId = busData.id;
+    switchView('commuter');
+    toggleRouteSelection(busData.routeId);
+    selectedBusCard.classList.remove('hidden');
+    updateBusDetailCard(busData);
+}
+
+function updateBusDetailCard(busData) {
+    if (!busData) return;
+    
+    // Calculate ETA
+    const route = allRoutesData[busData.routeId];
+    let etaText = "-- min";
+    let nextStopName = "Calculating...";
+
+    if (route) {
+        let minDist = Infinity;
+        let nearest = null;
+        const busLatLng = L.latLng(busData.lat, busData.lng);
+
+        route.stops.forEach(stop => {
+            const stopLatLng = L.latLng(stop.lat, stop.lng);
+            const dist = busLatLng.distanceTo(stopLatLng);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = stop;
+            }
+        });
+
+        if (nearest) {
+            nextStopName = nearest.name;
+            const speed = Math.max(busData.speed, 30);
+            const seconds = minDist / (speed * 1000 / 3600);
+            etaText = minDist < 50 ? "Arrived" : `${Math.ceil(seconds / 60)} min`;
         }
-
-    } catch (error) {
-        console.warn("Polling Error (Is Backend Running?):", error.message);
-    }
-}
-
-// --- UI RENDERING ---
-
-function renderRouteListUI() {
-    const routeList = document.getElementById('route-list');
-    routeList.innerHTML = '';
-
-    Object.entries(allRoutesData).forEach(([routeId, routeData]) => {
-        const routeElement = document.createElement('div');
-        routeElement.className = 'p-3 bg-gray-50/50 dark:bg-gray-700/50 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/50';
-        routeElement.id = `route-item-${routeId}`;
-        routeElement.innerHTML = `<p class="font-semibold text-gray-700 dark:text-gray-200">${routeData.routeName}</p><i class="fa-solid fa-chevron-right text-gray-400"></i>`;
-
-        routeElement.addEventListener('click', () => {
-            if (selectedRouteId === routeId) {
-                selectedRouteId = null;
-                clearRouteSelection();
-                clearStopMarkers();
-                document.getElementById('route-details-view').classList.add('hidden');
-            } else {
-                selectedRouteId = routeId;
-                highlightRoute(routeId);
-                showRouteDetails(routeId);
-            }
-        });
-        routeList.appendChild(routeElement);
-    });
-}
-
-function updateAuthorityList(buses) {
-    const busStatusList = document.getElementById('bus-status-list');
-    busStatusList.innerHTML = '';
-
-    if (buses.length === 0) {
-        busStatusList.innerHTML = `<div class="text-sm text-center text-gray-500 dark:text-gray-400 p-4">Waiting for bus data...<br><span class="text-xs">Ensure backend & simulator are running</span></div>`;
-        return;
     }
 
-    buses.sort((a, b) => (a.id).localeCompare(b.id)).forEach(bus => {
-        const busElement = document.createElement('div');
-        busElement.className = `p-3 rounded-lg bg-gray-50/50 dark:bg-gray-700/50 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/50`;
-        busElement.innerHTML = `
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="font-bold text-gray-800 dark:text-white">${allRoutesData[bus.routeId]?.routeName || bus.routeId}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">${bus.id}</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-500">${Math.round(bus.speed || 0)} km/h</span>
-                    <div class="w-3 h-3 rounded-full blinking" style="background-color: #3b82f6"></div>
-                </div>
-            </div>
-        `;
-        busElement.addEventListener('click', () => {
-            const marker = busMarkers[bus.id];
-            if (marker) {
-                map.panTo(marker.getPosition());
-                google.maps.event.trigger(marker, 'click');
-            }
-        });
-        busStatusList.appendChild(busElement);
-    });
-}
-
-// --- MAP INTERACTION ---
-
-function highlightRoute(routeId) {
-    // Reset all lines
-    Object.values(routePolylines).forEach(p => p.setMap(null));
-
-    // Draw selected
-    if (routePolylines[routeId]) {
-        routePolylines[routeId].setMap(map);
-        routePolylines[routeId].setOptions({ strokeColor: '#1d4ed8', strokeWeight: 6, strokeOpacity: 1, zIndex: 10 });
-
-        // Fit bounds
-        const bounds = new google.maps.LatLngBounds();
-        routePolylines[routeId].getPath().forEach(latLng => bounds.extend(latLng));
-        map.fitBounds(bounds);
-    }
-
-    // UI Highlight
-    document.querySelectorAll('#route-list > div').forEach(el => el.classList.remove('selected-route'));
-    const item = document.getElementById(`route-item-${routeId}`);
-    if (item) item.classList.add('selected-route');
-}
-
-function clearRouteSelection() {
-    Object.values(routePolylines).forEach(p => p.setMap(null));
-    document.querySelectorAll('#route-list > div').forEach(el => el.classList.remove('selected-route'));
-}
-
-function clearStopMarkers() {
-    stopMarkers.forEach(marker => marker.setMap(null));
-    stopMarkers = [];
-}
-
-function showRouteDetails(routeId) {
-    clearStopMarkers();
-    const routeData = allRoutesData[routeId];
-    if (!routeData) return;
-
-    const routeDetailsView = document.getElementById('route-details-view');
-    const stopList = document.getElementById('stop-list');
-    const routeDetailsTitle = document.getElementById('route-details-title');
-
-    routeDetailsTitle.textContent = routeData.routeName;
-    stopList.innerHTML = '';
-    routeDetailsView.classList.remove('hidden');
-
-    routeData.stops.forEach((stop, index) => {
-        // Create Stop Marker
-        const marker = new google.maps.Marker({
-            position: { lat: stop.lat, lng: stop.lng },
-            map: map,
-            title: stop.name,
-            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#ffffff', fillOpacity: 1, strokeColor: '#3b82f6', strokeWeight: 2 }
-        });
-        stopMarkers.push(marker);
-
-        // UI List Item
-        const stopElement = document.createElement('div');
-        stopElement.className = 'p-2 rounded-lg bg-gray-100/50 dark:bg-gray-800/50 flex justify-between items-center';
-        stopElement.innerHTML = `<p class="text-sm font-semibold text-gray-700 dark:text-gray-200">${index + 1}. ${stop.name}</p>`;
-        stopList.appendChild(stopElement);
-    });
+    busDetailId.textContent = busData.id;
+    busDetailSpeed.textContent = `${Math.round(busData.speed)} km/h`;
+    busDetailNextStop.textContent = nextStopName;
+    busDetailEta.textContent = etaText;
 }
 
 function updateBusMarker(busData) {
-    const latLng = { lat: busData.lat, lng: busData.lng };
-
-    // Custom SVG Icon for Bus
-    const busIcon = {
-        path: 'M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11C5.84 5 5.28 5.42 5.08 6.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z',
-        fillColor: '#ffe600',
-        fillOpacity: 1,
-        strokeWeight: 1,
-        strokeColor: document.documentElement.classList.contains('dark') ? '#000' : '#fff',
-        scale: 1.2,
-        anchor: new google.maps.Point(12, 12)
-    };
+    const busIcon = L.icon({
+        iconUrl: BUS_ICON_URL, iconSize: [50, 50], iconAnchor: [25, 25]
+    });
 
     if (busMarkers[busData.id]) {
-        busMarkers[busData.id].setPosition(latLng);
-        busMarkers[busData.id].setIcon(busIcon);
-        busMarkers[busData.id].set('busData', busData);
+        animateMarkerTo(busMarkers[busData.id], busData.lat, busData.lng);
+        if (selectedBusId === busData.id) {
+            updateBusDetailCard(busData);
+        }
     } else {
-        const marker = new google.maps.Marker({
-            position: latLng,
-            map: map,
-            icon: busIcon,
-            title: busData.id
-        });
-        marker.set('busData', busData);
+        const marker = L.marker([busData.lat, busData.lng], {
+            icon: busIcon, busId: busData.id, busData: busData
+        }).addTo(map);
 
-        // Info Window Click
-        marker.addListener('click', () => {
-            const data = marker.get('busData');
-            const content = `
-                <div class="text-black">
-                    <p class="font-bold text-lg">${allRoutesData[data.routeId]?.routeName || data.routeId}</p>
-                    <p class="text-sm">ID: ${data.id}</p>
-                    <p class="text-xs text-gray-500">Speed: ${Math.round(data.speed || 0)} km/h</p>
-                </div>
-            `;
-            infoWindow.setContent(content);
-            infoWindow.open(map, marker);
-        });
-
+        marker.on('click', () => selectBus(busData));
         busMarkers[busData.id] = marker;
     }
 }
 
-// --- FINDER LOGIC ---
+function animateMarkerTo(marker, newLat, newLng, duration = 2000) {
+    const startPos = marker.getLatLng();
+    const startLat = startPos.lat;
+    const startLng = startPos.lng;
+    const startTime = performance.now();
+    const busId = marker.options.busId;
 
-async function findAvailableBuses() {
-    const startInput = document.getElementById('start-location-input');
-    const endInput = document.getElementById('end-location-input');
+    if (busId && markerAnimFrames[busId]) cancelAnimationFrame(markerAnimFrames[busId]);
 
-    finderResultsList.innerHTML = `<div class="flex justify-center p-4"><div class="spinner border-t-blue-500 border-4 w-6 h-6 rounded-full"></div></div>`;
+    function step(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        marker.setLatLng([startLat + (newLat - startLat) * progress, startLng + (newLng - startLng) * progress]);
+        if (progress < 1) {
+            markerAnimFrames[busId] = requestAnimationFrame(step);
+        } else {
+            delete markerAnimFrames[busId];
+        }
+    }
+    markerAnimFrames[busId] = requestAnimationFrame(step);
+}
 
-    const startStopName = startInput.value;
-    const endStopName = endInput.value;
+// --- ROUTE & VIEW LOGIC ---
 
-    if (!stopToRoutesMap.has(startStopName) || !stopToRoutesMap.has(endStopName)) {
-        finderResultsList.innerHTML = `<p class="text-red-500 text-sm text-center">Please select valid stops.</p>`;
+function toggleRouteSelection(routeId) {
+    const isSelected = selectedRouteId === routeId;
+    
+    if (selectedRouteId && routePolylines[selectedRouteId]) {
+        map.removeLayer(routePolylines[selectedRouteId]);
+        document.getElementById(`route-item-${selectedRouteId}`)?.classList.remove('border-blue-500', 'bg-blue-50', 'dark:border-brand-500', 'dark:bg-brand-900/20');
+    }
+    stopMarkers.forEach(m => map.removeLayer(m)); 
+    stopMarkers = [];
+    document.getElementById('route-details-view').classList.add('hidden');
+
+    if (isSelected && !selectedBusId) { 
+        selectedRouteId = null; 
+        return; 
+    }
+    
+    selectedRouteId = routeId;
+    const poly = routePolylines[routeId];
+    if (poly) {
+        poly.addTo(map);
+        map.fitBounds(poly.getBounds(), { padding: [50, 50] });
+    }
+    
+    const item = document.getElementById(`route-item-${routeId}`);
+    if (item) item.classList.add('border-blue-500', 'bg-blue-50', 'dark:border-brand-500', 'dark:bg-brand-900/20');
+
+    document.getElementById('route-details-view').classList.remove('hidden');
+    document.getElementById('route-details-title').textContent = allRoutesData[routeId].routeName;
+    
+    renderStopTimeline(routeId);
+}
+
+function renderStopTimeline(routeId) {
+    const stopListEl = document.getElementById('stop-list');
+    stopListEl.innerHTML = '';
+    
+    allRoutesData[routeId].stops.forEach((stop, idx) => {
+        const marker = L.circleMarker([stop.lat, stop.lng], {
+            radius: 6, fillColor: "#1e293b", fillOpacity: 1, color: "#3b82f6", weight: 2
+        }).addTo(map);
+        marker.bindPopup(`<b>${stop.name}</b>`);
+        stopMarkers.push(marker);
+        
+        const isLast = idx === allRoutesData[routeId].stops.length - 1;
+        const html = `
+            <div class="relative ${!isLast ? 'pb-6' : ''}">
+                 ${!isLast ? '<div class="absolute left-[-21px] top-2 bottom-0 w-0.5 bg-slate-300 dark:bg-white/10"></div>' : ''}
+                 <div class="absolute left-[-25px] top-1 w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-600 ring-4 ring-slate-100 dark:ring-gray-900"></div>
+                 <p class="text-sm text-slate-700 dark:text-slate-300 font-medium">${stop.name}</p>
+                 <p class="text-[10px] text-slate-400 dark:text-slate-500">Stop #${idx + 1}</p>
+            </div>
+        `;
+        stopListEl.insertAdjacentHTML('beforeend', html);
+    });
+}
+
+function renderRouteListUI() {
+    routeList.innerHTML = '';
+    Object.entries(allRoutesData).forEach(([routeId, routeData]) => {
+        const el = document.createElement('div');
+        el.className = 'group p-4 rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between border bg-white border-slate-100 hover:border-blue-200 hover:shadow-md dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:hover:border-brand-500/30 dark:shadow-none';
+        el.id = `route-item-${routeId}`;
+        el.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm bg-blue-50 text-blue-600 dark:bg-brand-500/20 dark:text-brand-500">${routeId.replace('AS-', '')}</div>
+                <div><h4 class="font-semibold text-sm text-slate-800 dark:text-slate-200">${routeData.routeName}</h4></div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-slate-300 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-brand-500"></i>
+        `;
+        el.addEventListener('click', () => {
+            selectedBusId = null;
+            selectedBusCard.classList.add('hidden');
+            toggleRouteSelection(routeId);
+        });
+        routeList.appendChild(el);
+    });
+}
+
+function updateAuthorityList(buses) {
+    busStatusList.innerHTML = '';
+    if (buses.length === 0) {
+        busStatusList.innerHTML = `<div class="text-center py-6 text-slate-400 text-sm">No active buses.</div>`;
+        return;
+    }
+    buses.sort((a, b) => (a.id).localeCompare(b.id)).forEach(bus => {
+        const el = document.createElement('div');
+        el.className = 'p-3 rounded-xl flex items-center justify-between cursor-pointer border bg-white border-slate-100 hover:bg-slate-50 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10';
+        el.innerHTML = `
+            <div class="flex items-center gap-3">
+                 <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                 <div><p class="font-bold text-sm text-slate-800 dark:text-slate-200">${bus.id}</p></div>
+            </div>
+            <span class="text-xs font-mono text-blue-600 dark:text-blue-400 font-semibold">${Math.round(bus.speed)} km/h</span>
+        `;
+        el.addEventListener('click', () => {
+             if (busMarkers[bus.id]) {
+                 map.flyTo(busMarkers[bus.id].getLatLng(), 16);
+                 selectBus(bus);
+             }
+        });
+        busStatusList.appendChild(el);
+    });
+}
+
+// --- FINDER LOGIC (UPDATED TO SHOW BUSES) ---
+
+findBusesBtn.addEventListener('click', () => {
+    finderResultsList.innerHTML = `<div class="flex justify-center p-4"><i class="fa-solid fa-circle-notch fa-spin text-blue-500"></i></div>`;
+    
+    const sName = startInput.value;
+    const eName = endInput.value;
+    const sRoutes = stopToRoutesMap.get(sName) || [];
+    const eRoutes = stopToRoutesMap.get(eName) || [];
+    const commonRoutes = sRoutes.filter(r => eRoutes.includes(r));
+    
+    finderResultsList.innerHTML = '';
+
+    if (commonRoutes.length === 0) {
+        finderResultsList.innerHTML = `<div class="text-center p-3 text-sm text-slate-400">No direct route found.</div>`;
         return;
     }
 
-    // Find routes that contain BOTH stops
-    const startRoutes = stopToRoutesMap.get(startStopName);
-    const endRoutes = stopToRoutesMap.get(endStopName);
-    const validRoutes = startRoutes.filter(routeId => endRoutes.includes(routeId));
+    // Find active buses on these routes
+    const activeBusesOnRoute = [];
+    
+    // Get Coordinates of Start Stop for ETA
+    const startStopData = allAvailableStops.find(s => s.name === sName);
+    const startLatLng = startStopData ? L.latLng(startStopData.lat, startStopData.lng) : null;
 
-    if (validRoutes.length === 0) {
-        finderResultsList.innerHTML = `<p class="text-gray-500 text-sm text-center">No direct route found.</p>`;
-        return;
-    }
+    Object.values(busMarkers).forEach(marker => {
+        const bus = marker.options.busData;
+        if (commonRoutes.includes(bus.routeId)) {
+            // Calculate ETA to Start Stop
+            let etaSeconds = 0;
+            let etaText = "--";
+            
+            if (startLatLng) {
+                const busLatLng = marker.getLatLng();
+                const dist = busLatLng.distanceTo(startLatLng);
+                const speed = Math.max(bus.speed, 30); // fallback speed
+                etaSeconds = dist / (speed * 1000 / 3600);
+                etaText = dist < 100 ? "Arriving" : `${Math.ceil(etaSeconds / 60)} min`;
+            }
 
-    // Find active buses on those routes
-    const activeBuses = Object.values(busMarkers)
-        .map(m => m.get('busData'))
-        .filter(b => validRoutes.includes(b.routeId));
-
-    if (activeBuses.length === 0) {
-        finderResultsList.innerHTML = `<p class="text-gray-500 text-sm text-center">Route exists (${validRoutes.join(', ')}), but no buses active.</p>`;
-        return;
-    }
-
-    // Calculate ETAs using Client-Side Distance Matrix (Since backend doesn't have it yet)
-    const startStopDetails = allAvailableStops.find(s => s.name === startStopName);
-    const startLatLng = new google.maps.LatLng(startStopDetails.lat, startStopDetails.lng);
-
-    const service = new google.maps.DistanceMatrixService();
-    const origins = activeBuses.map(b => new google.maps.LatLng(b.lat, b.lng));
-
-    service.getDistanceMatrix({
-        origins: origins,
-        destinations: [startLatLng],
-        travelMode: 'DRIVING'
-    }, (response, status) => {
-        finderResultsList.innerHTML = '';
-        if (status === 'OK') {
-            const results = [];
-            response.rows.forEach((row, i) => {
-                if (row.elements[0].status === 'OK') {
-                    results.push({
-                        bus: activeBuses[i],
-                        duration: row.elements[0].duration.text,
-                        seconds: row.elements[0].duration.value
-                    });
-                }
-            });
-
-            results.sort((a, b) => a.seconds - b.seconds);
-
-            results.forEach(res => {
-                const el = document.createElement('div');
-                el.className = 'p-3 rounded-lg bg-gray-50/50 dark:bg-gray-700/50 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-600/50 flex justify-between items-center';
-                el.innerHTML = `
-                    <div>
-                        <p class="font-bold text-gray-800 dark:text-white">${allRoutesData[res.bus.routeId].routeName}</p>
-                        <p class="text-xs text-gray-500">Bus: ${res.bus.id}</p>
-                    </div>
-                    <p class="text-sm font-semibold text-green-500">${res.duration}</p>
-                `;
-                el.addEventListener('click', () => {
-                    const marker = busMarkers[res.bus.id];
-                    if (marker) {
-                        map.panTo(marker.getPosition());
-                        google.maps.event.trigger(marker, 'click');
-                    }
-                });
-                finderResultsList.appendChild(el);
+            activeBusesOnRoute.push({
+                bus: bus,
+                eta: etaText,
+                etaSec: etaSeconds
             });
         }
     });
-}
 
-function setupStopInputListeners() {
-    // Basic datalist filtering handled by browser
-}
-
-// --- THEMING & MAP SETUP ---
-
-function toggleTheme() {
-    const isDark = document.documentElement.classList.contains('dark');
-    if (isDark) {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-        if (map) map.setOptions({ styles: lightMapStyle });
-    } else {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
-        if (map) map.setOptions({ styles: darkMapStyle });
+    if (activeBusesOnRoute.length === 0) {
+        finderResultsList.innerHTML = `<div class="text-center p-3 text-sm text-slate-400">Route exists, but no buses active.</div>`;
+        return;
     }
-}
 
-function initMap() {
-    map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 31.6339, lng: 74.8723 },
-        zoom: 13,
-        disableDefaultUI: true
+    // Sort by ETA (soonest first)
+    activeBusesOnRoute.sort((a, b) => a.etaSec - b.etaSec);
+
+    activeBusesOnRoute.forEach(item => {
+        const bus = item.bus;
+        const route = allRoutesData[bus.routeId];
+        
+        const el = document.createElement('div');
+        el.className = 'p-4 rounded-xl flex justify-between items-center cursor-pointer border bg-blue-50 border-blue-100 hover:shadow-md dark:bg-white/5 dark:border-white/10';
+        el.innerHTML = `
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-[10px] font-bold bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-200">${bus.id}</span>
+                    <p class="text-blue-500 text-xs font-bold uppercase">To ${eName}</p>
+                </div>
+                <h4 class="font-bold text-slate-800 dark:text-white">${route.routeName}</h4>
+            </div>
+            <div class="text-right">
+                <p class="text-lg font-bold text-slate-800 dark:text-white">${item.eta}</p>
+                <p class="text-xs text-green-600 dark:text-green-400 font-semibold">from ${sName}</p>
+            </div>
+        `;
+        el.addEventListener('click', () => {
+            selectBus(bus); // Open Bus Details directly
+        });
+        finderResultsList.appendChild(el);
     });
-    infoWindow = new google.maps.InfoWindow();
+});
 
-    // Apply saved theme
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-        map.setOptions({ styles: darkMapStyle });
-    } else {
-        map.setOptions({ styles: lightMapStyle });
+// --- OTHER UTILS ---
+window.switchView = function(viewName) {
+    [finderView, commuterView, authorityView].forEach(v => v.classList.add('hidden'));
+    [finderBtn, commuterBtn, authorityBtn].forEach(b => b.classList.remove('active'));
+    document.getElementById(`${viewName}-view`).classList.remove('hidden');
+    document.getElementById(`${viewName}-view-btn`).classList.add('active');
+};
+
+userLocBtn.addEventListener('click', () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            map.flyTo([pos.coords.latitude, pos.coords.longitude], 15);
+        });
     }
+});
 
-    main();
+swapBtn.addEventListener('click', () => {
+    const temp = startInput.value; startInput.value = endInput.value; endInput.value = temp;
+    toggleClearBtn(startInput, clearStartBtn);
+    toggleClearBtn(endInput, clearEndBtn);
+});
+
+function toggleClearBtn(input, btn) {
+    if (input.value.length > 0) btn.classList.remove('hidden'); else btn.classList.add('hidden');
 }
+[startInput, endInput].forEach(input => {
+    const btn = input === startInput ? clearStartBtn : clearEndBtn;
+    input.addEventListener('input', () => toggleClearBtn(input, btn));
+    btn.addEventListener('click', () => { input.value = ''; input.focus(); btn.classList.add('hidden'); });
+});
 
-window.initMap = initMap;
+document.getElementById('sos-btn').addEventListener('click', () => sosModal.classList.remove('hidden'));
+document.getElementById('close-sos-modal-btn').addEventListener('click', () => sosModal.classList.add('hidden'));
 
-// Dynamic Script Load (To prevent exposing key in HTML if needed, though strictly client side)
-(function () {
-    if (GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY !== "YOUR_KEY_HERE") {
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap&libraries=geometry,places`;
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
-    } else {
-        alert("Please set GOOGLE_MAPS_API_KEY in app.js");
-    }
-})();
+initMap();

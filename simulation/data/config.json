@@ -1,34 +1,34 @@
 {
   "routes": {
-    "AS-1": {
-      "routeName": "AS - 1",
+    "RT-101": {
+      "routeName": "Golden Temple Plaza - Gobindgarh Fort Entry",
       "stops": [
-        { "name": "Golden Temple", "coords": [31.6200, 74.8765] },
-        { "name": "Jallianwala Bagh", "coords": [31.6209, 74.8801] },
+        { "name": "Golden Temple Plaza", "coords": [31.6200, 74.8765] },
+        { "name": "Jallianwala Bagh West", "coords": [31.6209, 74.8801] },
         { "name": "Partition Museum", "coords": [31.6258, 74.8787] },
-        { "name": "Gobindgarh Fort", "coords": [31.6271, 74.8603] }
+        { "name": "Gobindgarh Fort Entry", "coords": [31.6271, 74.8603] }
       ]
     },
-    "AS-2": {
-      "routeName": "AS - 2",
+    "RT-202": {
+      "routeName": "Hall Bazaar Main - Lawrence Road Junction",
       "stops": [
-        { "name": "Hall Bazaar", "coords": [31.6298, 74.8760] },
-        { "name": "Katra Jaimal Singh Bazaar", "coords": [31.6261, 74.8756] },
-        { "name": "Lawrence Road", "coords": [31.6490, 74.8600] }
+        { "name": "Hall Bazaar Main", "coords": [31.6298, 74.8760] },
+        { "name": "Katra Jaimal Singh", "coords": [31.6261, 74.8756] },
+        { "name": "Lawrence Road Junction", "coords": [31.6490, 74.8600] }
       ]
     },
-    "AS-3": {
-      "routeName": "AS - 3",
+    "RT-303": {
+      "routeName": "Durgiana Mandir - Ram Tirth Sthal",
       "stops": [
-        { "name": "Durgiana Temple", "coords": [31.6254, 74.8676] },
+        { "name": "Durgiana Mandir", "coords": [31.6254, 74.8676] },
         { "name": "Mata Lal Devi Temple", "coords": [31.6372, 74.8611] },
-        { "name": "Ram Tirth Temple", "coords": [31.6510, 74.7550] }
+        { "name": "Ram Tirth Sthal", "coords": [31.6510, 74.7550] }
       ]
     }
   },
   "bus_assignments": {
-    "AS-1": ["BUS-01", "BUS-02"],
-    "AS-2": ["BUS-03", "BUS-04"],
-    "AS-3": ["BUS-05", "BUS-06"]
+    "RT-101": ["PB-02-1001", "PB-02-1002"],
+    "RT-202": ["PB-02-2001", "PB-02-2002"],
+    "RT-303": ["PB-02-3001", "PB-02-3002"]
   }
 }
