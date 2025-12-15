@@ -1,308 +1,179 @@
-# 🚍 Smart Transit
+# 🚍 Smart Transit System
 
-### Intelligent Route Planning • Smart Navigation • Modern UI • Scalable Architecture
-
-Smart Transit is a **full-stack intelligent navigation system** designed to compute the **fastest, safest, and most optimized routes** inside a campus, city, or custom geographical zone. It uses **graph algorithms**, **real‑time map rendering**, and **clean UI/UX principles** to deliver a smooth, reliable navigation experience.
-
-The system is built for **students, commuters, universities, organizations, and public transport networks**.
+A real-time intelligent transit navigation system featuring live bus tracking, route optimization, and a modern dashboard. This project uses a **FastAPI** backend, **Vanilla JavaScript** frontend, and **TimescaleDB (PostgreSQL)** for time-series data storage.
 
 ---
 
-## 🌟 Why Smart Transit?
+## 📋 Prerequisites
 
-Modern navigation apps are powerful but often overloaded for small, controlled environments.
-**Smart Transit solves this by focusing on:**
+Before you begin, ensure you have the following installed on your machine:
 
-* Lightweight & customizable transit networks
-* Highly optimized routing algorithms
-* Clean, distraction‑free UI
-* Expandable backend for future modules
-* Easy deployment & scalability
-
-Perfect for **campus navigation**, **internal routing**, **organization transit**, and **academic submissions**.
+1. **Python 3.8+** – [https://www.python.org/downloads/](https://www.python.org/downloads/)
+2. **Docker Desktop** – Required for the database: [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)
+3. **Git** – To clone the repository
 
 ---
 
-## ✨ Key Features
+## 🛠️ Installation & Setup
 
-### 🔹 1. Route & Navigation
+### 1. Clone the Repository
 
-* Computes shortest path between any two locations
-* Multi-step routing support
-* Clean line visualization on map
-* Dynamic polyline drawing
-* Automatic fallback route generation
-
-### 🔹 2. Map & UI
-
-* Built using **Leaflet + OpenStreetMap**
-* Interactive markers
-* Smooth animations & transitions
-* Real-time location selection
-* Fully responsive layout
-
-### 🔹 3. Smart Algorithm Engine
-
-* Graph implementation using **Adjacency Lists**
-* Supports **Dijkstra** and **A*** algorithms
-* Flexible nodes & edges (easy to modify)
-* Fast computation with algorithm-level optimizations
-
-### 🔹 4. Modern Frontend Architecture
-
-* React component-driven structure
-* TailwindCSS styling
-* Custom hooks for cleaner logic
-* Context API for global state management
-* Reusable services & utilities
-
-### 🔹 5. Backend API Engine
-
-* Node.js + Express
-* Clean routing structure
-* Controllers → Services → Algorithm Layer
-* Centralized error handling
-* Future support: MongoDB graph storage
-
-### 🔹 6. Developer Friendly
-
-* Proxy support to avoid CORS during development
-* Environment variable separation
-* Structured & scalable project layout
-* Easy deployment on cloud or local
-
----
-
-## 🧭 System Architecture (Detailed)
-
-```
-                          +------------------------------+
-                          |         FRONTEND (UI)        |
-                          |   React + Leaflet + Tailwind |
-                          +---------------+--------------+
-                                          |
-                                          |  REST API Requests
-                                          v
-                     +-------------------------------------------+
-                     |              BACKEND SERVER               |
-                     |        Node.js + Express Framework        |
-                     |  Controllers → Services → Algorithm Layer |
-                     +------------------+------------------------+
-                                        |
-                                        | Graph Computation
-                                        v
-                     +-------------------------------------------+
-                     |           ROUTE COMPUTATION ENGINE        |
-                     |  Graph Data → Dijkstra / A* Pathfinding   |
-                     +------------------+------------------------+
-                                        |
-                                        | Optional
-                                        v
-                     +-------------------------------------------+
-                     |        DATABASE (Future Integration)       |
-                     |        MongoDB / Graph Database            |
-                     +-------------------------------------------+
-```
-
----
-
-## 🧰 Tech Stack
-
-### **Frontend**
-
-* React.js
-* TailwindCSS
-* Leaflet.js
-* Axios
-* Vite
-
-### **Backend**
-
-* Node.js
-* Express.js
-* Dijkstra / A* Algorithms
-* dotenv
-* cors
-
-### **Future Integrations**
-
-* MongoDB
-* Redis caching
-* WebSocket live transit tracking
-
----
-
-## 📁 Folder Structure (Finalized & Professional)
-
-```
-Smart-Transit/
-│
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── hooks/
-│   │   ├── context/
-│   │   ├── services/
-│   │   ├── utils/
-│   │   └── App.jsx
-│   └── vite.config.js
-│
-├── backend/
-│   ├── controllers/
-│   ├── routes/
-│   ├── services/
-│   ├── utils/
-│   ├── algorithms/
-│   ├── app.js
-│   ├── server.js
-│   └── package.json
-│
-├── docs/
-│   ├── architecture.png
-│   ├── api-reference.md
-│   └── screenshots/
-│
-├── .env.example
-├── README.md
-└── LICENSE
-```
-
----
-
-## 🧩 Proxy Setup (Important for Development)
-
-To avoid CORS issues, Vite provides a local proxy:
-
-```js
-// vite.config.js
-server: {
-  proxy: {
-    '/api': 'http://localhost:5000'
-  }
-}
-```
-
-Now your frontend can call:
-
-```js
-axios.get('/api/route')
-```
-
-Instead of:
-
-```js
-axios.get('http://localhost:5000/api/route')
-```
-
----
-
-## 🔌 API Endpoints
-
-### **GET /api/route**
-
-Calculate the shortest route between two nodes.
-
-#### Query Parameters
-
-```
-?source=START&destination=END
-```
-
-#### Example Response
-
-```json
-{
-  "distance": 2.8,
-  "eta": "7 minutes",
-  "path": ["A1", "B2", "C3"]
-}
-```
-
----
-
-## 🚀 Run Locally
-
-### **1. Clone Repository**
-
-```
-git clone https://github.com/goyalk01/Smart-Transit
+```bash
+git clone https://github.com/your-username/Smart-Transit.git
 cd Smart-Transit
 ```
 
-### **2. Setup Backend**
+---
 
-```
-cd backend
-npm install
-cp .env.example .env
-npm start
-```
+### 2. Set up the Database (Docker)
 
-### **3. Setup Frontend**
+We use Docker to run a TimescaleDB instance. Make sure Docker Desktop is running.
 
-```
-cd frontend
-npm install
-npm run dev
+```bash
+# Start the database container
+docker compose up -d
 ```
 
-**Frontend:** [http://localhost:5173](http://localhost:5173)
-Backend: [http://localhost:5000](http://localhost:5000)
+> **Note:** If `docker compose` fails, try:
+>
+> ```bash
+> docker-compose up -d
+> ```
 
 ---
 
-## 🔧 Environment Variables
+### 3. Install Python Dependencies
 
-```
-PORT=5000
-MAP_API_KEY=
-MONGO_URI=
+Install all required libraries using the provided `requirements.txt` file.
+
+```bash
+pip install -r requirements.txt
 ```
 
 ---
 
-## 🖼 Screenshots (Coming Soon)
+### 4. Initialize the Database
 
-Add the following in `/docs/screenshots`:
+#### A. Create Tables
 
-* Home screen
-* Map UI
-* Route selection
-* Path visualization
+Ensure the database schema is applied. You can use the helper script or run the SQL manually.
 
----
+```bash
+python scripts/setup_tables.py
+```
 
-## 🧭 Roadmap (Planned Enhancements)
+#### B. Load Route Data
 
-* Live location tracking
-* Transport schedule integration
-* Authentication system
-* Admin dashboard for node editing
-* Faster A* heuristics
-* Voice guidance
-* Offline caching (PWA)
-* Heatmap layer for traffic
+Populate the database with stops and routes defined in `simulation/data/config.json`.
 
----
+```bash
+python scripts/init_db_data.py
+```
 
-## 👥 Contributors
+**Expected Output:**
 
-| Contributor          | GitHub                                                                       |
-| -------------------- | ---------------------------------------------------------------------------- |
-| **Krish Goyal**      | [https://github.com/goyalk01](https://github.com/goyalk01)                   |
-| **Abhinav Atul**     | [https://github.com/abhinav-atul](https://github.com/abhinav-atul)           |
-| **Vaidehi Dadheech** | [https://github.com/vdadheech](https://github.com/vdadheech)                 |
-| **Devansh Bansal**   | [https://github.com/Devansh-Bansal-AI](https://github.com/Devansh-Bansal-AI) |
-| **Divya Mishra**     | [https://github.com/DivyaMishra](https://github.com/DivyaMishra)             |
-
-> Profile photo badges can be added if needed.
+```
+✅ Success! Database populated successfully.
+```
 
 ---
 
-## 📜 License
+## 🚀 How to Run (3-Terminal Setup)
 
-This project is licensed under the **MIT License**.
+You need to run three separate processes simultaneously. Open **three terminal windows** in the project root folder.
 
 ---
+
+### 🖥️ Terminal 1: Backend API
+
+This server handles GPS pings and serves data to the frontend.
+
+```bash
+uvicorn backend.app.main_old:app --reload --port 8000
+```
+
+📘 API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+### 🚌 Terminal 2: Bus Simulator
+
+This script simulates buses moving along the routes and sending GPS coordinates.
+
+```bash
+python simulation/bus_simulator.py
+```
+
+You should see logs like:
+
+```
+📡 Sent ping → BUS-01
+```
+
+---
+
+### 🌐 Terminal 3: Frontend Client
+
+Use **Live Server** (VS Code extension) to run the frontend. Since the frontend uses ES6 modules, it must be served via a local web server.
+
+**Steps:**
+
+1. Open the project in **VS Code**
+2. Install the **Live Server** extension (by Ritwick Dey)
+3. Right-click on `frontend/index.html`
+4. Click **"Open with Live Server"**
+
+The application will automatically open in your browser.
+
+---
+
+## 🌍 Access the Application
+
+Open your web browser and visit:
+
+👉 **[http://localhost:5500](http://localhost:5500)**
+
+### Features
+
+* **Finder View:** Search for a stop to find the nearest bus
+* **Routes View:** Click a route (e.g., AS-1) to see its path and stops on the map
+* **Fleet View:** Monitor real-time statuses of all active buses
+
+---
+
+## 📂 Project Structure
+
+```
+Smart-Transit/
+├── backend/
+│   └── app/
+│       ├── main_old.py        # Main API Server
+│       └── db/schema.sql     # Database Structure
+├── frontend/
+│   ├── index.html             # Main User Interface
+│   └── assets/                # JS Logic & CSS Styles
+├── simulation/
+│   ├── bus_simulator.py       # GPS Simulation Script
+│   └── data/config.json       # Route & Stop Definitions
+├── scripts/
+│   ├── setup_tables.py        # Create a Setup Script
+│   └── init_db_data.py        # Data Seeding Script
+└── docker-compose.yml         # DB Container Configuration
+```
+
+---
+
+## 🔧 Troubleshooting
+
+* **Map not loading?**
+  Check `frontend/assets/app.js` and ensure the `MAPS_API_KEY` is valid.
+
+* **Error: `relation \"routes\" does not exist`?**
+  The database tables were not created. Run the schema creation step in **Installation – Step 4A**.
+
+* **CORS errors in browser console?**
+  Ensure the frontend is accessed via `http://localhost:5500` and not by double-clicking the HTML file.
+
+---
+
+✨ *Happy Building!*
