@@ -23,6 +23,21 @@ class FaceValidator:
             model_selection=0, 
             min_detection_confidence=min_detection_confidence
         )
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensures cleanup."""
+        self.close()
+        return False
+    
+    def close(self):
+        """Explicitly close the detector and free resources."""
+        if hasattr(self, 'detector') and self.detector:
+            self.detector.close()
+            self.detector = None
 
     def process_frame(self, frame) -> Tuple[bool, int]:
         """
@@ -129,6 +144,5 @@ class FaceValidator:
             }
     
     def __del__(self):
-        """Cleanup resources."""
-        if hasattr(self, 'detector'):
-            self.detector.close()
+        """Cleanup resources - fallback if close() not called explicitly."""
+        self.close()

@@ -122,11 +122,19 @@ async def receive_crowd_status(crowd_data: CrowdStatus):
         async with app.state.pool.acquire() as conn:
             result = await conn.execute(query, crowd_data.passenger_count, crowd_data.crowd_status, crowd_data.vehicle_id)
             
+            # Check if any rows were updated
+            rows_affected = int(result.split()[-1]) if result else 0
+            if rows_affected == 0:
+                # No existing record found - log warning but don't fail
+                # This can happen if camera system starts before GPS data is available
+                print(f"⚠️  Warning: No vehicle_logs entry found for {crowd_data.vehicle_id}. Crowd data will be applied on next GPS update.")
+            
         return {
             "status": "success", 
             "vehicle": crowd_data.vehicle_id,
             "crowd_status": crowd_data.crowd_status,
-            "passenger_count": crowd_data.passenger_count
+            "passenger_count": crowd_data.passenger_count,
+            "rows_updated": rows_affected
         }
     except Exception as e:
         print(f"Error updating crowd status: {e}")

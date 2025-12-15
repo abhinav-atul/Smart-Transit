@@ -134,57 +134,67 @@ def simulate_camera_system(bus_id=BUS_ID, interval=CAPTURE_INTERVAL, use_real_ca
     print(f"   Camera Mode: {'Real' if use_real_camera else 'Simulated'}")
     print(f"   Press Ctrl+C to stop\n")
     
-    # Initialize face detector
-    detector = FaceValidator()
-    
-    capture_count = 0
-    
-    try:
-        while True:
-            capture_count += 1
-            print(f"\n📸 Capture #{capture_count} at {datetime.now().strftime('%H:%M:%S')}")
-            
-            # Capture image
-            if use_real_camera:
-                frame = capture_from_camera()
-                if frame is None:
-                    print("   Falling back to test image...")
+    # Initialize face detector using context manager for proper resource cleanup
+    with FaceValidator() as detector:
+        capture_count = 0
+        
+        try:
+            while True:
+                capture_count += 1
+                print(f"\n📸 Capture #{capture_count} at {datetime.now().strftime('%H:%M:%S')}")
+                
+                # Capture image
+                if use_real_camera:
+                    frame = capture_from_camera()
+                    if frame is None:
+                        print("   Falling back to test image...")
+                        # Simulate varying crowd levels
+                        num_faces = np.random.randint(5, 35)
+                        frame = generate_test_image(num_faces)
+                else:
                     # Simulate varying crowd levels
                     num_faces = np.random.randint(5, 35)
                     frame = generate_test_image(num_faces)
-            else:
-                # Simulate varying crowd levels
-                num_faces = np.random.randint(5, 35)
-                frame = generate_test_image(num_faces)
-                print(f"   Generated test image (simulated faces: ~{num_faces})")
-            
-            # Analyze crowd
-            result = detector.analyze_crowd(frame)
-            
-            print(f"   Detected faces: {result['face_count']}")
-            print(f"   Crowd status: {result['crowd_status'].upper()}")
-            print(f"   Confidence: {result['confidence']:.2f}")
-            
-            # Send data to backend
-            send_crowd_data(bus_id, result['face_count'], result['crowd_status'])
-            
-            # Wait for next capture
-            time.sleep(interval)
-            
-    except KeyboardInterrupt:
-        print("\n\n🛑 Camera simulator stopped")
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-    finally:
-        print("👋 Shutting down...")
+                    print(f"   Generated test image (simulated faces: ~{num_faces})")
+                
+                # Analyze crowd
+                result = detector.analyze_crowd(frame)
+                
+                print(f"   Detected faces: {result['face_count']}")
+                print(f"   Crowd status: {result['crowd_status'].upper()}")
+                print(f"   Confidence: {result['confidence']:.2f}")
+                
+                # Send data to backend
+                send_crowd_data(bus_id, result['face_count'], result['crowd_status'])
+                
+                # Wait for next capture
+                time.sleep(interval)
+                
+        except KeyboardInterrupt:
+            print("\n\n🛑 Camera simulator stopped")
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+        finally:
+            print("👋 Shutting down...")
 
 
 if __name__ == "__main__":
     import sys
     
-    # Parse command line arguments
+    # Parse command line arguments with validation
     bus_id = sys.argv[1] if len(sys.argv) > 1 else BUS_ID
-    interval = int(sys.argv[2]) if len(sys.argv) > 2 else CAPTURE_INTERVAL
+    
+    # Validate and parse interval
+    try:
+        interval = int(sys.argv[2]) if len(sys.argv) > 2 else CAPTURE_INTERVAL
+        if interval < 1:
+            print("❌ Error: Capture interval must be at least 1 second")
+            sys.exit(1)
+    except ValueError:
+        print(f"❌ Error: Invalid interval '{sys.argv[2]}'. Must be a positive integer.")
+        print(f"Usage: python camera_simulator.py [BUS_ID] [INTERVAL] [--camera]")
+        sys.exit(1)
+    
     use_camera = "--camera" in sys.argv
     
     simulate_camera_system(bus_id, interval, use_camera)
