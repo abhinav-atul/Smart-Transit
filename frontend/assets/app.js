@@ -45,12 +45,41 @@ const busDetailId = document.getElementById('bus-detail-id');
 const busDetailSpeed = document.getElementById('bus-detail-speed');
 const busDetailNextStop = document.getElementById('bus-detail-next-stop');
 const busDetailEta = document.getElementById('bus-detail-eta');
+const busDetailCrowdBadge = document.getElementById('bus-detail-crowd-badge');
+const busDetailPassengerCount = document.getElementById('bus-detail-passenger-count');
 
 const sosModal = document.getElementById('sos-modal');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const userLocBtn = document.getElementById('user-location-btn');
 const stopsDatalist = document.getElementById('stops-datalist');
 
+
+// --- UTILITY FUNCTIONS ---
+function getCrowdStatusDisplay(status) {
+    const statusMap = {
+        'low': { 
+            label: 'Low', 
+            color: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400 border-green-200 dark:border-green-500/30',
+            icon: '✓'
+        },
+        'medium': { 
+            label: 'Medium', 
+            color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/30',
+            icon: '⚠'
+        },
+        'high': { 
+            label: 'Full', 
+            color: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400 border-red-200 dark:border-red-500/30',
+            icon: '✕'
+        },
+        'unknown': { 
+            label: 'Unknown', 
+            color: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400 border-gray-200 dark:border-gray-500/30',
+            icon: '?'
+        }
+    };
+    return statusMap[status] || statusMap['unknown'];
+}
 
 // --- INITIALIZATION ---
 function initMap() {
@@ -147,7 +176,15 @@ async function fetchLiveBusData() {
         const formattedBuses = [];
 
         liveBuses.forEach(bus => {
-            const busData = { id: bus.vehicle_id, routeId: bus.route_id, lat: bus.lat, lng: bus.lng, speed: bus.speed };
+            const busData = { 
+                id: bus.vehicle_id, 
+                routeId: bus.route_id, 
+                lat: bus.lat, 
+                lng: bus.lng, 
+                speed: bus.speed,
+                passengerCount: bus.passenger_count || 0,
+                crowdStatus: bus.crowd_status || 'unknown'
+            };
             updateBusMarker(busData);
             activeBusIds.add(busData.id);
             formattedBuses.push(busData);
@@ -207,6 +244,12 @@ function updateBusDetailCard(busData) {
     busDetailSpeed.textContent = `${Math.round(busData.speed)} km/h`;
     busDetailNextStop.textContent = nextStopName;
     busDetailEta.textContent = etaText;
+    
+    // Update crowd status
+    const crowdDisplay = getCrowdStatusDisplay(busData.crowdStatus || 'unknown');
+    busDetailCrowdBadge.textContent = `${crowdDisplay.icon} ${crowdDisplay.label}`;
+    busDetailCrowdBadge.className = `text-[10px] font-bold px-2 py-0.5 rounded border ${crowdDisplay.color}`;
+    busDetailPassengerCount.textContent = `${busData.passengerCount || 0} passengers`;
 }
 
 function updateBusMarker(busData) {
@@ -338,14 +381,23 @@ function updateAuthorityList(buses) {
         return;
     }
     buses.sort((a, b) => (a.id).localeCompare(b.id)).forEach(bus => {
+        const crowdDisplay = getCrowdStatusDisplay(bus.crowdStatus);
         const el = document.createElement('div');
-        el.className = 'p-3 rounded-xl flex items-center justify-between cursor-pointer border bg-white border-slate-100 hover:bg-slate-50 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10';
+        el.className = 'p-3 rounded-xl cursor-pointer border bg-white border-slate-100 hover:bg-slate-50 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10';
         el.innerHTML = `
-            <div class="flex items-center gap-3">
-                 <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                 <div><p class="font-bold text-sm text-slate-800 dark:text-slate-200">${bus.id}</p></div>
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-3">
+                     <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                     <div><p class="font-bold text-sm text-slate-800 dark:text-slate-200">${bus.id}</p></div>
+                </div>
+                <span class="text-xs font-mono text-blue-600 dark:text-blue-400 font-semibold">${Math.round(bus.speed)} km/h</span>
             </div>
-            <span class="text-xs font-mono text-blue-600 dark:text-blue-400 font-semibold">${Math.round(bus.speed)} km/h</span>
+            <div class="flex items-center gap-2 ml-5">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${crowdDisplay.color}">
+                    ${crowdDisplay.icon} ${crowdDisplay.label}
+                </span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">${bus.passengerCount} passengers</span>
+            </div>
         `;
         el.addEventListener('click', () => {
              if (busMarkers[bus.id]) {
