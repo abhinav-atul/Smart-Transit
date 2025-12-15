@@ -70,7 +70,7 @@ Populate the database with stops and routes defined in `simulation/data/config.j
 python scripts/init_db_data.py
 ```
 
-**Expected Output:**
+**Expected Output: **
 
 ```
 ✅ Success! Database populated successfully.
