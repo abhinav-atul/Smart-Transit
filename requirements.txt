@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+asyncpg
+pydantic
+requests
+geopy
+pandas
+scikit-learn
+joblib
+opencv-python
+mediapipe
+python-dotenv
