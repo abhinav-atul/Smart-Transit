@@ -35,6 +35,12 @@ class GPSPing(BaseModel):
     speed: float = 0.0
     timestamp: Optional[datetime] = None
 
+class CrowdStatus(BaseModel):
+    vehicle_id: str
+    passenger_count: int
+    crowd_status: str  # "low", "medium", "high", "unknown"
+    timestamp: Optional[datetime] = None
+
 # --- LIFESPAN EVENTS (Startup/Shutdown) ---
 
 @app.on_event("startup")
@@ -77,16 +83,49 @@ async def receive_location_ping(ping: GPSPing):
     ts = ping.timestamp if ping.timestamp else datetime.now()
     
     query = """
-        INSERT INTO vehicle_logs (time, vehicle_id, route_id, latitude, longitude, speed)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO vehicle_logs (time, vehicle_id, route_id, latitude, longitude, speed, passenger_count, crowd_status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     """
     
     try:
         async with app.state.pool.acquire() as conn:
-            await conn.execute(query, ts, ping.vehicle_id, ping.route_id, ping.lat, ping.lng, ping.speed)
+            await conn.execute(query, ts, ping.vehicle_id, ping.route_id, ping.lat, ping.lng, ping.speed, 0, 'unknown')
         return {"status": "success", "vehicle": ping.vehicle_id}
     except Exception as e:
         print(f"Error saving ping: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 1B. RECEIVE CROWD STATUS (From Camera System)
+@app.post("/crowd-status")
+async def receive_crowd_status(crowd_data: CrowdStatus):
+    """
+    Receives crowd analysis data from on-vehicle camera system.
+    Updates the most recent vehicle log entry with crowd information.
+    """
+    ts = crowd_data.timestamp if crowd_data.timestamp else datetime.now()
+    
+    # Update the most recent entry for this vehicle with crowd data
+    query = """
+        UPDATE vehicle_logs 
+        SET passenger_count = $1, crowd_status = $2
+        WHERE vehicle_id = $3 
+        AND time = (
+            SELECT MAX(time) FROM vehicle_logs WHERE vehicle_id = $3
+        )
+    """
+    
+    try:
+        async with app.state.pool.acquire() as conn:
+            result = await conn.execute(query, crowd_data.passenger_count, crowd_data.crowd_status, crowd_data.vehicle_id)
+            
+        return {
+            "status": "success", 
+            "vehicle": crowd_data.vehicle_id,
+            "crowd_status": crowd_data.crowd_status,
+            "passenger_count": crowd_data.passenger_count
+        }
+    except Exception as e:
+        print(f"Error updating crowd status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # 2. SERVE LIVE POSITIONS (To Frontend Map)
@@ -95,10 +134,11 @@ async def get_live_buses():
     """
     Returns the *latest* known position for every active bus.
     Uses 'DISTINCT ON' for high performance.
+    Includes crowd status information.
     """
     query = """
         SELECT DISTINCT ON (vehicle_id) 
-            vehicle_id, route_id, latitude, longitude, speed, time
+            vehicle_id, route_id, latitude, longitude, speed, time, passenger_count, crowd_status
         FROM vehicle_logs
         ORDER BY vehicle_id, time DESC
     """
@@ -114,7 +154,9 @@ async def get_live_buses():
                 "lat": row["latitude"],
                 "lng": row["longitude"],
                 "speed": row["speed"],
-                "last_update": row["time"].isoformat()
+                "last_update": row["time"].isoformat(),
+                "passenger_count": row["passenger_count"],
+                "crowd_status": row["crowd_status"]
             }
             for row in rows
         ]

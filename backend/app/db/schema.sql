@@ -27,7 +27,8 @@ CREATE TABLE vehicle_logs (
     latitude FLOAT,
     longitude FLOAT,
     speed FLOAT, -- New field for ETA calculation
-    passenger_count INT DEFAULT 0 -- For low bandwidth analytics
+    passenger_count INT DEFAULT 0, -- For low bandwidth analytics
+    crowd_status VARCHAR(20) DEFAULT 'unknown' -- Crowd level: low, medium, high, unknown
 );
 
 -- Convert to Hypertable for efficiency (TimescaleDB feature)
