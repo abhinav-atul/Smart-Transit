@@ -1,60 +1,179 @@
-# Smart-transit
+# 🚍 Smart Transit System
 
----
- 
-# 🚌 Smart-Transit
-> A real-time public transit tracking system featuring live bus locations, dynamic routing, and an interactive "Liquid Glass" UI.
-
-**Smart-Transit** is a full-stack prototype that simulates and visualizes a smart public transportation network. It uses **Python** to simulate bus movements along real-world geographic paths (using Google Maps Directions API) and updates a **Firebase** backend in real-time. The frontend consumes this data to display live bus markers, calculate ETXs (Estimated Time of Arrival), and show route paths on an interactive map.
+A real-time intelligent transit navigation system featuring live bus tracking, route optimization, and a modern dashboard. This project uses a **FastAPI** backend, **Vanilla JavaScript** frontend, and **TimescaleDB (PostgreSQL)** for time-series data storage.
 
 ---
 
-## 🌟 Key Features
+## 📋 Prerequisites
 
-* **📍 Real-Time Fleet Tracking**: Watch buses move live on the map with smooth updates.
-* **AQ Route Visualization**: View color-coded route paths (polylines) overlaid on the map.
-* **DO ETA Calculator**: Select a start and end stop to instantly find the nearest bus and its arrival time.
-* **🌓 Dynamic Theming**: Toggle between Light and Dark modes with custom map styles.
-* **🆘 Emergency SOS**: A built-in SOS alert system for passenger safety.
-* **📱 Responsive UI**: A "Liquid Glass" design ensuring the app looks great on desktop and mobile.
-* **🤖 Backend Simulation**: A Python script that generates realistic bus traffic patterns based on real road networks.
+Before you begin, ensure you have the following installed on your machine:
+
+1. **Python 3.8+** – [https://www.python.org/downloads/](https://www.python.org/downloads/)
+2. **Docker Desktop** – Required for the database: [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)
+3. **Git** – To clone the repository
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Installation & Setup
 
-### Frontend
-* **HTML5 & CSS3**: Custom "Liquid Glass" styling and animations.
-* **Tailwind CSS**: For rapid, responsive layout design.
-* **JavaScript (ES6+)**: Core application logic.
-* **Google Maps JavaScript API**: Map rendering, directions, and distance matrices.
-* **Firebase SDK (Web)**: Authentication and Firestore real-time listeners.
-
-### Backend / Simulation
-* **Python**: Core logic for the bus simulator.
-* **Firebase Admin SDK**: For secure server-side writing to the database.
-* **Google Maps Python Client**: To fetch accurate road geometries for simulation paths.
-* **Geopy**: For geodesic distance calculations (detecting stop arrivals).
-
----
-
-## 🚀 Getting Started
-
-Follow these steps to set up the project locally.
-
-### Prerequisites:
-1.  **Node.js & NPM** (for package management).
-2.  **Python 3.x** (for the simulator only).
-3.  A **Google Cloud Project** with the *Maps JavaScript API* and *Directions API* enabled.
-4.  A **Firebase Project** with Firestore enabled.
-
-Step 1: Clone & Install Dependencies
-Clone the repository and install the Python dependencies for the simulator.
+### 1. Clone the Repository
 
 ```bash
-# Clone the project
-git clone [https://github.com/your-username/smart-transit.git](https://github.com/your-username/smart-transit.git)
-cd smart-transit
+git clone https://github.com/your-username/Smart-Transit.git
+cd Smart-Transit
+```
 
-# Install Python requirements (creates a virtual environment recommended)
-pip install firebase-admin googlemaps geopy
+---
+
+### 2. Set up the Database (Docker)
+
+We use Docker to run a TimescaleDB instance. Make sure Docker Desktop is running.
+
+```bash
+# Start the database container
+docker compose up -d
+```
+
+> **Note:** If `docker compose` fails, try:
+>
+> ```bash
+> docker-compose up -d
+> ```
+
+---
+
+### 3. Install Python Dependencies
+
+Install all required libraries using the provided `requirements.txt` file.
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+### 4. Initialize the Database
+
+#### A. Create Tables
+
+Ensure the database schema is applied. You can use the helper script or run the SQL manually.
+
+```bash
+python scripts/setup_tables.py
+```
+
+#### B. Load Route Data
+
+Populate the database with stops and routes defined in `simulation/data/config.json`.
+
+```bash
+python scripts/init_db_data.py
+```
+
+**Expected Output: **
+
+```
+✅ Success! Database populated successfully.
+```
+
+---
+
+## 🚀 How to Run (3-Terminal Setup)
+
+You need to run three separate processes simultaneously. Open **three terminal windows** in the project root folder.
+
+---
+
+### 🖥️ Terminal 1: Backend API
+
+This server handles GPS pings and serves data to the frontend.
+
+```bash
+uvicorn backend.app.main_old:app --reload --port 8000
+```
+
+📘 API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+### 🚌 Terminal 2: Bus Simulator
+
+This script simulates buses moving along the routes and sending GPS coordinates.
+
+```bash
+python simulation/bus_simulator.py
+```
+
+You should see logs like:
+
+```
+📡 Sent ping → BUS-01
+```
+
+---
+
+### 🌐 Terminal 3: Frontend Client
+
+Use **Live Server** (VS Code extension) to run the frontend. Since the frontend uses ES6 modules, it must be served via a local web server.
+
+**Steps:**
+
+1. Open the project in **VS Code**
+2. Install the **Live Server** extension (by Ritwick Dey)
+3. Right-click on `frontend/index.html`
+4. Click **"Open with Live Server"**
+
+The application will automatically open in your browser.
+
+---
+
+## 🌍 Access the Application
+
+Open your web browser and visit:
+
+👉 **[http://localhost:5500](http://localhost:5500)**
+
+### Features
+
+* **Finder View:** Search for a stop to find the nearest bus
+* **Routes View:** Click a route (e.g., AS-1) to see its path and stops on the map
+* **Fleet View:** Monitor real-time statuses of all active buses
+
+---
+
+## 📂 Project Structure
+
+```
+Smart-Transit/
+├── backend/
+│   └── app/
+│       ├── main_old.py        # Main API Server
+│       └── db/schema.sql     # Database Structure
+├── frontend/
+│   ├── index.html             # Main User Interface
+│   └── assets/                # JS Logic & CSS Styles
+├── simulation/
+│   ├── bus_simulator.py       # GPS Simulation Script
+│   └── data/config.json       # Route & Stop Definitions
+├── scripts/
+│   ├── setup_tables.py        # Create a Setup Script
+│   └── init_db_data.py        # Data Seeding Script
+└── docker-compose.yml         # DB Container Configuration
+```
+
+---
+
+## 🔧 Troubleshooting
+
+* **Map not loading?**
+  Check `frontend/assets/app.js` and ensure the `MAPS_API_KEY` is valid.
+
+* **Error: `relation \"routes\" does not exist`?**
+  The database tables were not created. Run the schema creation step in **Installation – Step 4A**.
+
+* **CORS errors in browser console?**
+  Ensure the frontend is accessed via `http://localhost:5500` and not by double-clicking the HTML file.
+
+---
+
+✨ *Happy Building!*

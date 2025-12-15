@@ -1,0 +1,10 @@
+services:
+  db:
+    image: timescale/timescaledb:latest-pg14
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: secretpass123
+      POSTGRES_DB: transit_db
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
