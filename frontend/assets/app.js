@@ -98,46 +98,35 @@ async function main() {
  */
 async function fetchAndProcessStaticData() {
     try {
-        // Ideally: const response = await fetch(`${API_BASE_URL}/routes`);
-        // For the Prototype: We load the config.json logic or a mock structure
-        // This simulates what the API should return.
+        console.log("Fetching static route data from API...");
+        
+        // 1. Fetch data from the live backend API
+        const response = await fetch(`${API_BASE_URL}/routes`);
+        
+        // Check if the API call was successful
+        if (!response.ok) {
+             throw new Error(`HTTP error! Status: ${response.status}. Is API running on port 8000?`);
+        }
+        
+        // The API returns an object like: { "routes": { "AS-1": { ... } } }
+        const data = await response.json(); 
 
-        // Mocking the API response structure based on your config.json
-        // In production, move this data to the database and fetch via API
-        const mockResponse = {
-            "AS-1": {
-                routeName: "AS - 1",
-                stops: [
-                    { name: "Golden Temple", lat: 31.6200, lng: 74.8765 },
-                    { name: "Jallianwala Bagh", lat: 31.6209, lng: 74.8801 },
-                    { name: "Partition Museum", lat: 31.6258, lng: 74.8787 },
-                    { name: "Gobindgarh Fort", lat: 31.6271, lng: 74.8603 }
-                ]
-            },
-            "AS-2": {
-                routeName: "AS - 2",
-                stops: [
-                    { name: "Hall Bazaar", lat: 31.6298, lng: 74.8760 },
-                    { name: "Katra Jaimal Singh Bazaar", lat: 31.6261, lng: 74.8756 },
-                    { name: "Lawrence Road", lat: 31.6490, lng: 74.8600 }
-                ]
-            },
-            "AS-3": {
-                routeName: "AS - 3",
-                stops: [
-                    { name: "Durgiana Temple", lat: 31.6254, lng: 74.8676 },
-                    { name: "Mata Lal Devi Temple", lat: 31.6372, lng: 74.8611 },
-                    { name: "Ram Tirth Temple", lat: 31.6510, lng: 74.7550 }
-                ]
-            }
-        };
-
-        allRoutesData = mockResponse;
+        // 2. Assign the real data to the global variable
+        allRoutesData = data.routes; 
+        
+        // 3. Process and render the real data
         processRouteDataForUI();
         renderRouteListUI();
+        
+        console.log("✅ Routes loaded successfully from API.");
 
     } catch (e) {
-        console.error("Failed to load static route data", e);
+        console.error("Failed to load static route data:", e);
+        // Fallback UI to alert user
+        const routeList = document.getElementById('route-list');
+        if(routeList) {
+             routeList.innerHTML = `<div class="text-sm text-center text-red-500 p-4">Error loading routes. Check console for details.</div>`;
+        }
     }
 }
 

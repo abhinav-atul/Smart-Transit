@@ -5,6 +5,8 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import asyncpg
 import json
+import asyncio
+
 
 # --- APP CONFIGURATION ---
 app = FastAPI(title="Smart-Transit API Gateway")
@@ -22,6 +24,7 @@ app.add_middleware(
 # Database Connection String (Matches docker-compose.yml)
 DB_DSN = "postgresql://user@localhost:5433/transit_db"
 
+
 # --- DATA MODELS ---
 
 class GPSPing(BaseModel):
@@ -36,11 +39,20 @@ class GPSPing(BaseModel):
 
 @app.on_event("startup")
 async def startup_db():
-    try:
-        app.state.pool = await asyncpg.create_pool(DB_DSN)
-        print("✅ Database connection established.")
-    except Exception as e:
-        print(f"❌ Database connection failed: {e}")
+    retries = 10
+    delay = 2
+
+    for i in range(retries):
+        try:
+            app.state.pool = await asyncpg.create_pool(DB_DSN)
+            print("✅ Database connection established.")
+            return
+        except Exception as e:
+            print(f"❌ DB connection failed (attempt {i+1}/{retries}): {e}")
+            await asyncio.sleep(delay)
+
+    print("🚨 Could not connect to database after retries.")
+
 
 @app.on_event("shutdown")
 async def shutdown_db():
@@ -166,7 +178,4 @@ async def get_eta(route_id: str):
         "source": "rule_based_fallback"
     }
 
-if __name__ == "__main__":
-    import uvicorn
-    # Reload=True allows you to change code without restarting the server
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
