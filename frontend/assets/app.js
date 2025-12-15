@@ -316,6 +316,11 @@ function clearRouteSelection() {
     document.querySelectorAll('#route-list > div').forEach(el => el.classList.remove('selected-route'));
 }
 
+function clearStopMarkers() {
+    stopMarkers.forEach(marker => marker.setMap(null));
+    stopMarkers = [];
+}
+
 function showRouteDetails(routeId) {
     clearStopMarkers();
     const routeData = allRoutesData[routeId];
