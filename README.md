@@ -176,4 +176,3 @@ Smart-Transit/
 
 ---
 
-✨ *Happy Building!*
