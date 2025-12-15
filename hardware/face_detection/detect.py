@@ -61,17 +61,21 @@ class FaceValidator:
         # Determine crowd status based on face count
         if face_count == 0:
             crowd_status = "unknown"
+            confidence = 0.0
         elif face_count <= self.LOW_THRESHOLD:
             crowd_status = "low"
+            confidence = min(0.9, 0.7 + (face_count * 0.02))  # Scale with count
         elif face_count <= self.MEDIUM_THRESHOLD:
             crowd_status = "medium"
+            confidence = min(0.95, 0.75 + (face_count * 0.01))
         else:
             crowd_status = "high"
+            confidence = 0.95
         
         return {
             "face_count": face_count,
             "crowd_status": crowd_status,
-            "confidence": 0.85 if faces_found else 0.0
+            "confidence": confidence
         }
     
     def process_image_from_bytes(self, image_bytes: bytes) -> Dict[str, Any]:

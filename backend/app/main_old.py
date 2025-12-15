@@ -24,6 +24,10 @@ app.add_middleware(
 # Database Connection String (Matches docker-compose.yml)
 DB_DSN = "postgresql://user@localhost:5433/transit_db"
 
+# --- CONSTANTS ---
+DEFAULT_PASSENGER_COUNT = 0
+DEFAULT_CROWD_STATUS = "unknown"
+
 
 # --- DATA MODELS ---
 
@@ -89,7 +93,7 @@ async def receive_location_ping(ping: GPSPing):
     
     try:
         async with app.state.pool.acquire() as conn:
-            await conn.execute(query, ts, ping.vehicle_id, ping.route_id, ping.lat, ping.lng, ping.speed, 0, 'unknown')
+            await conn.execute(query, ts, ping.vehicle_id, ping.route_id, ping.lat, ping.lng, ping.speed, DEFAULT_PASSENGER_COUNT, DEFAULT_CROWD_STATUS)
         return {"status": "success", "vehicle": ping.vehicle_id}
     except Exception as e:
         print(f"Error saving ping: {e}")

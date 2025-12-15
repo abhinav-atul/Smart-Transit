@@ -8,11 +8,12 @@ import numpy as np
 import requests
 import time
 import base64
+import os
 from datetime import datetime
 from detect import FaceValidator
 
-# Configuration
-API_BASE_URL = "http://localhost:8000"
+# Configuration - can be overridden via environment variables
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 CAPTURE_INTERVAL = 10  # seconds between captures
 BUS_ID = "BUS-01"  # Default bus ID (can be passed as argument)
 
@@ -110,6 +111,10 @@ def send_crowd_data(bus_id, face_count, crowd_status):
             print(f"✅ Crowd data sent: {bus_id} - {crowd_status} ({face_count} people)")
         else:
             print(f"⚠️  API error: {response.status_code}")
+    except requests.exceptions.Timeout as e:
+        print(f"❌ Request timeout: Could not reach API within 5 seconds")
+    except requests.exceptions.ConnectionError as e:
+        print(f"❌ Connection error: Could not connect to {API_BASE_URL}")
     except requests.exceptions.RequestException as e:
         print(f"❌ Failed to send data: {e}")
 

@@ -7,8 +7,10 @@ This is for existing installations that need to be updated.
 import asyncio
 import asyncpg
 import sys
+import os
 
-DB_DSN = "postgresql://user@localhost:5433/transit_db"
+# Database connection - can be overridden via environment variable
+DB_DSN = os.getenv("DB_DSN", "postgresql://user@localhost:5433/transit_db")
 
 async def migrate_database():
     """Add crowd_status column if it doesn't exist."""
