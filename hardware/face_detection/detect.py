@@ -145,4 +145,8 @@ class FaceValidator:
     
     def __del__(self):
         """Cleanup resources - fallback if close() not called explicitly."""
-        self.close()
+        try:
+            self.close()
+        except:
+            # Silently ignore cleanup errors during garbage collection
+            pass

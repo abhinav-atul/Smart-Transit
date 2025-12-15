@@ -111,12 +111,12 @@ def send_crowd_data(bus_id, face_count, crowd_status):
             print(f"✅ Crowd data sent: {bus_id} - {crowd_status} ({face_count} people)")
         else:
             print(f"⚠️  API error: {response.status_code}")
-    except requests.exceptions.Timeout as e:
+    except requests.exceptions.Timeout:
         print(f"❌ Request timeout: Could not reach API within 5 seconds")
     except requests.exceptions.ConnectionError as e:
-        print(f"❌ Connection error: Could not connect to {API_BASE_URL}")
+        print(f"❌ Connection error: Could not connect to {API_BASE_URL} - {type(e).__name__}")
     except requests.exceptions.RequestException as e:
-        print(f"❌ Failed to send data: {e}")
+        print(f"❌ Failed to send data: {type(e).__name__}: {e}")
 
 
 def simulate_camera_system(bus_id=BUS_ID, interval=CAPTURE_INTERVAL, use_real_camera=False):

@@ -51,7 +51,9 @@ async def migrate_database():
                 WHERE crowd_status IS NULL
             """
             result = await conn.execute(update_query)
-            print(f"✓ Updated records: {result}")
+            # Extract row count from result string (e.g., "UPDATE 5")
+            rows_updated = int(result.split()[-1]) if result and result.split() else 0
+            print(f"✓ Updated {rows_updated} record(s)")
         
         # Verify the column
         print("\n✅ Verifying schema...")
