@@ -22,7 +22,7 @@ def create_dummy_model(model_path='eta_model.pkl'):
     # Simplified ETA calculation with some noise and hour penalty (traffic)
     eta_base = (distances / (speeds * 1000 / 3600)) / 60  # Distance/Speed in minutes
     eta = eta_base + (hours / 10) + np.random.rand(data_size) * 5
-    
+        
     # Features and Target
     X = pd.DataFrame({'dist': distances, 'speed': speeds, 'hour': hours})
     y = eta

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -6,17 +6,16 @@ from datetime import datetime
 import asyncpg
 import json
 import asyncio
-
+import os
+from ml_engine.predictor import ETAPredictor # <--- ADDED
 
 # --- APP CONFIGURATION ---
 app = FastAPI(title="Smart-Transit API Gateway")
 
 # Enable CORS (Cross-Origin Resource Sharing)
-# This allows your frontend (likely running on port 5500 or 8080) 
-# to talk to this backend (running on port 8000).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact domains
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -24,6 +23,8 @@ app.add_middleware(
 # Database Connection String (Matches docker-compose.yml)
 DB_DSN = "postgresql://user@localhost:5433/transit_db"
 
+# Model Path (Using the final production model file)
+MODEL_PATH = "ml_engine/eta_model.pkl" # <--- UPDATED to use the final saved model
 
 # --- DATA MODELS ---
 
@@ -44,8 +45,19 @@ async def startup_db():
 
     for i in range(retries):
         try:
+            # 1. Database Connection
             app.state.pool = await asyncpg.create_pool(DB_DSN)
             print("✅ Database connection established.")
+            
+            # 2. ML Model Startup
+            if os.path.exists(MODEL_PATH):
+                app.state.eta_predictor = ETAPredictor(model_path=MODEL_PATH)
+                print(f"✅ ML Model loaded from {MODEL_PATH}.")
+            else:
+                # Use a non-existent path to force the fallback logic
+                app.state.eta_predictor = ETAPredictor(model_path="NON_EXISTENT")
+                print("⚠️ ML Model not found. ETA prediction will use rule-based fallback.")
+            
             return
         except Exception as e:
             print(f"❌ DB connection failed (attempt {i+1}/{retries}): {e}")
@@ -164,18 +176,38 @@ async def get_static_routes():
         print(f"Route Fetch Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# 4. ETA PREDICTION (Placeholder for ML integration)
-@app.get("/eta/{route_id}")
-async def get_eta(route_id: str):
+# 4. ETA PREDICTION (ML integration) <--- NEW/MODIFIED ENDPOINT
+@app.get("/eta") 
+async def get_eta_ml(
+    distance_meters: float = Query(..., description="Distance remaining to destination stop in meters"),
+    current_speed_kmh: float = Query(..., description="Vehicle speed in km/h")
+):
     """
-    Future home of the ML model inference.
-    Currently returns a rule-based placeholder.
+    Predicts ETA using the loaded ML model or a fallback rule.
     """
-    return {
-        "route_id": route_id,
-        "prediction": "5 mins",
-        "confidence": 0.85,
-        "source": "rule_based_fallback"
-    }
+    try:
+        # Convert speed from km/h to m/s, as required by your ETAPredictor's internal logic
+        current_speed_m_s = current_speed_kmh / 3.6
+        
+        # Determine the current hour (for the traffic feature)
+        hour_of_day = datetime.now().hour
+        
+        # Call the predictor
+        prediction_minutes = app.state.eta_predictor.predict(
+            distance_meters=distance_meters, 
+            current_speed=current_speed_m_s, 
+            hour_of_day=hour_of_day
+        )
+        
+        source = "ML_model" if app.state.eta_predictor.ready else "rule_based_fallback"
+        
+        return {
+            "prediction": f"{prediction_minutes:.2f} mins",
+            "seconds": prediction_minutes * 60,
+            "source": source
+        }
 
-
+    except Exception as e:
+        print(f"ML Prediction Error: {e}")
+        # Note: If ML fails, the frontend will automatically use the Google Maps fallback
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
