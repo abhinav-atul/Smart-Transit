@@ -5,6 +5,7 @@ Loads settings from environment variables with sensible defaults.
 
 import os
 import sys
+import re
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -23,14 +24,15 @@ class Settings:
     """Application settings loaded from environment variables."""
 
     # Database
-    DATABASE_URL: str = os.getenv(
+    _raw_db_url = os.getenv(
         "DATABASE_URL", "postgresql://user:secretpass123@localhost:5433/transit_db"
     )
+    DATABASE_URL: str = re.sub(r'^postgres://', 'postgresql://', _raw_db_url)
 
     # API
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
-    FRONTEND_ORIGIN: str = os.getenv("FRONTEND_ORIGIN", "http://localhost:5500")
+    FRONTEND_ORIGIN: str = os.getenv("FRONTEND_ORIGIN", "http://localhost:8000")
 
     # ML Model
     ML_MODEL_PATH: str = str(

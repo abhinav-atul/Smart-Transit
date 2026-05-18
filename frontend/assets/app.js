@@ -1,5 +1,5 @@
 // --- CONFIGURATION ---
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = window.location.origin;
 const BUS_ICON_URL = "assets/bus-icon.svg";
 const POLL_INTERVAL_MS = 2000;
 
@@ -716,3 +716,7 @@ window.addEventListener('beforeunload', () => {
 });
 
 initMap();
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Smart Transit",
+  "short_name": "SmartTransit",
+  "description": "Real-time intelligent transit navigation",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "assets/bus-icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

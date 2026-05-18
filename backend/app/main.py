@@ -84,3 +84,16 @@ app.include_router(routes.router)
 app.include_router(eta.router)
 app.include_router(stats.router)
 app.include_router(websocket.router)
+from backend.app.routers import analytics
+app.include_router(analytics.router)
+from backend.app.routers import admin
+app.include_router(admin.router)
+
+# --- Static Files ---
+# Serve frontend static files — must be LAST (catch-all route)
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
+if frontend_dir.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
