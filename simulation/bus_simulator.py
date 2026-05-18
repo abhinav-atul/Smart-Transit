@@ -22,6 +22,8 @@ load_dotenv(PROJECT_ROOT / ".env")
 # Configuration
 API_PORT = os.getenv("API_PORT", "8000")
 API_URL = f"http://localhost:{API_PORT}/location"
+SIMULATOR_API_KEY = os.getenv("SIMULATOR_API_KEY", "sim-key-change-me")
+REQUEST_HEADERS = {"X-API-Key": SIMULATOR_API_KEY}
 CONFIG_PATH = PROJECT_ROOT / "simulation" / "data" / "config.json"
 OSRM_ROUTE_URL = "http://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson"
 
@@ -123,9 +125,9 @@ def simulate_buses():
             }
 
             try:
-                requests.post(API_URL, json=payload, timeout=0.5)
-            except requests.exceptions.RequestException:
-                pass  # Silent fail if API is down
+                requests.post(API_URL, json=payload, headers=REQUEST_HEADERS, timeout=0.5)
+            except requests.exceptions.RequestException as exc:
+                logger.debug("Ping failed for %s: %s", bus_id, exc)
 
         time.sleep(1)
 

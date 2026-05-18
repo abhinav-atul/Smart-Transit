@@ -19,7 +19,7 @@ Built with **FastAPI** backend, **Vanilla JavaScript** frontend, **TimescaleDB**
 │                    Leaflet Map + OSRM                            │
 │                   (Dark/Light Theme)                             │
 └────────────────────────┬─────────────────────────────────────────┘
-                         │ HTTP Polling (2s)
+                         │ WebSocket (/ws/buses) + HTTP fallback
                          ▼
 ┌────────────────────────────────────────────────────────────────┐
 │                     FASTAPI BACKEND                             │
@@ -83,7 +83,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env with your database password if needed
+# Edit .env with your database password and auth secrets
 ```
 
 ### 3. Start Database
@@ -135,11 +135,13 @@ Open **[http://localhost:5500](http://localhost:5500)** in your browser.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/` | Health check with system status |
-| `POST` | `/location` | Receive GPS pings from simulator |
+| `POST` | `/location` | Receive GPS pings from simulator (requires `X-API-Key`) |
 | `GET` | `/buses/live` | Latest position of all active buses |
 | `GET` | `/routes` | Static routes and stops (nested JSON) |
 | `GET` | `/eta` | ML-powered ETA prediction |
-| `GET` | `/stats` | Fleet statistics |
+| `GET` | `/stats` | Fleet statistics (requires JWT Bearer token) |
+| `POST` | `/auth/token` | Issue JWT token for admin endpoints |
+| `WS` | `/ws/buses` | Real-time bus position stream |
 | `GET` | `/docs` | Interactive Swagger UI |
 
 ---

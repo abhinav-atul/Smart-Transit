@@ -3,7 +3,8 @@ Fleet statistics endpoint.
 """
 
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from backend.app.auth import verify_token
 from backend.app.models import FleetStats
 from backend.app.db.pool import get_pool
 
@@ -19,7 +20,7 @@ def _require_db():
 
 
 @router.get("/stats", response_model=FleetStats)
-async def get_fleet_stats():
+async def get_fleet_stats(_token_payload: dict = Depends(verify_token)):
     """Fleet statistics for the dashboard."""
     pool = _require_db()
 

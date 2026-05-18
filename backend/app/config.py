@@ -47,5 +47,11 @@ class Settings:
     # Simulator
     BUS_POLL_STALE_SECONDS: int = 120  # Buses older than 2 min are "inactive"
 
+    # Authentication
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "change-me-in-production")
+    SIMULATOR_API_KEY: str = os.getenv("SIMULATOR_API_KEY", "sim-key-change-me")
+    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "admin123")
+
 
 settings = Settings()

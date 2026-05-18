@@ -38,9 +38,22 @@ CREATE TABLE IF NOT EXISTS vehicle_logs (
     passenger_count INT DEFAULT 0
 );
 
+-- 4. Latest Vehicle Positions (optimized live query table)
+CREATE TABLE IF NOT EXISTS vehicle_latest_positions (
+    vehicle_id VARCHAR(50) PRIMARY KEY,
+    route_id VARCHAR(50),
+    latitude FLOAT,
+    longitude FLOAT,
+    speed FLOAT,
+    last_update TIMESTAMPTZ NOT NULL
+);
+
 -- Index for fast latest-position queries
 CREATE INDEX IF NOT EXISTS idx_vehicle_logs_vehicle_time
 ON vehicle_logs (vehicle_id, time DESC);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_latest_last_update
+ON vehicle_latest_positions (last_update DESC);
 
 -- Convert to Hypertable for efficiency (TimescaleDB feature, graceful)
 DO $$

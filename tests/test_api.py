@@ -5,7 +5,6 @@ Run: pytest tests/ -v
 """
 
 import pytest
-from httpx import AsyncClient, ASGITransport
 from backend.app.main import app
 
 
@@ -92,7 +91,21 @@ def test_eta_missing_params(client):
 # --- GPS Ping (Location) ---
 
 def test_location_valid_ping_no_db(client):
-    """Without DB, posting a GPS ping should return 503."""
+    """With valid API key and no DB, posting a GPS ping should return 503."""
+    payload = {
+        "vehicle_id": "TEST-001",
+        "route_id": "RT-101",
+        "lat": 31.62,
+        "lng": 74.87,
+        "speed": 35.0,
+    }
+    response = client.post("/location", json=payload, headers={"X-API-Key": "sim-key-change-me"})
+    # Without DB running, expect 503
+    assert response.status_code == 503
+
+
+def test_location_missing_api_key_rejected(client):
+    """GPS ping without API key should be rejected."""
     payload = {
         "vehicle_id": "TEST-001",
         "route_id": "RT-101",
@@ -101,8 +114,20 @@ def test_location_valid_ping_no_db(client):
         "speed": 35.0,
     }
     response = client.post("/location", json=payload)
-    # Without DB running, expect 503
-    assert response.status_code == 503
+    assert response.status_code == 403
+
+
+def test_location_invalid_api_key_rejected(client):
+    """GPS ping with invalid API key should be rejected."""
+    payload = {
+        "vehicle_id": "TEST-001",
+        "route_id": "RT-101",
+        "lat": 31.62,
+        "lng": 74.87,
+        "speed": 35.0,
+    }
+    response = client.post("/location", json=payload, headers={"X-API-Key": "bad-key"})
+    assert response.status_code == 403
 
 
 def test_location_invalid_coordinates(client):
@@ -114,7 +139,7 @@ def test_location_invalid_coordinates(client):
         "lng": 74.87,
         "speed": 35.0,
     }
-    response = client.post("/location", json=payload)
+    response = client.post("/location", json=payload, headers={"X-API-Key": "sim-key-change-me"})
     assert response.status_code == 422
 
 
@@ -127,7 +152,7 @@ def test_location_empty_vehicle_id(client):
         "lng": 74.87,
         "speed": 35.0,
     }
-    response = client.post("/location", json=payload)
+    response = client.post("/location", json=payload, headers={"X-API-Key": "sim-key-change-me"})
     assert response.status_code == 422
 
 
@@ -150,9 +175,35 @@ def test_routes_no_db(client):
 # --- Stats ---
 
 def test_stats_no_db(client):
-    """Without DB, stats endpoint should return 503."""
-    response = client.get("/stats")
+    """Stats endpoint with valid JWT should return 503 when DB is unavailable."""
+    auth = client.post("/auth/token", json={"username": "admin", "password": "admin123"})
+    assert auth.status_code == 200
+    token = auth.json()["access_token"]
+    response = client.get("/stats", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 503
+
+
+def test_stats_requires_auth(client):
+    """Stats endpoint should require bearer authentication."""
+    response = client.get("/stats")
+    assert response.status_code == 401
+
+
+# --- Auth ---
+
+def test_auth_token_success(client):
+    """Auth endpoint should issue JWT for valid credentials."""
+    response = client.post("/auth/token", json={"username": "admin", "password": "admin123"})
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+
+
+def test_auth_token_invalid_credentials(client):
+    """Auth endpoint should reject invalid credentials."""
+    response = client.post("/auth/token", json={"username": "admin", "password": "wrong"})
+    assert response.status_code == 401
 
 
 # --- OpenAPI Schema ---

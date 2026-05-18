@@ -6,10 +6,12 @@ import logging
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
+from backend.app.auth import verify_api_key
 from backend.app.models import GPSPing, BusPosition
 from backend.app.db.pool import get_pool
+from backend.app.rate_limit import limiter
 
 logger = logging.getLogger("smart_transit.tracking")
 router = APIRouter(tags=["Tracking"])
@@ -24,7 +26,12 @@ def _require_db():
 
 
 @router.post("/location")
-async def receive_location_ping(ping: GPSPing):
+@limiter.limit("60/minute")
+async def receive_location_ping(
+    request: Request,
+    ping: GPSPing,
+    _api_key: str = Depends(verify_api_key),
+):
     """
     Receives raw GPS pings from the bus simulator or driver app.
     Stores them in the time-series database.
@@ -32,14 +39,41 @@ async def receive_location_ping(ping: GPSPing):
     pool = _require_db()
     ts = ping.timestamp if ping.timestamp else datetime.now(timezone.utc)
 
-    query = """
+    insert_log_query = """
         INSERT INTO vehicle_logs (time, vehicle_id, route_id, latitude, longitude, speed)
         VALUES ($1, $2, $3, $4, $5, $6)
+    """
+    upsert_latest_query = """
+        INSERT INTO vehicle_latest_positions (vehicle_id, route_id, latitude, longitude, speed, last_update)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (vehicle_id) DO UPDATE SET
+            route_id = EXCLUDED.route_id,
+            latitude = EXCLUDED.latitude,
+            longitude = EXCLUDED.longitude,
+            speed = EXCLUDED.speed,
+            last_update = EXCLUDED.last_update
     """
 
     try:
         async with pool.acquire() as conn:
-            await conn.execute(query, ts, ping.vehicle_id, ping.route_id, ping.lat, ping.lng, ping.speed)
+            await conn.execute(
+                insert_log_query,
+                ts,
+                ping.vehicle_id,
+                ping.route_id,
+                ping.lat,
+                ping.lng,
+                ping.speed,
+            )
+            await conn.execute(
+                upsert_latest_query,
+                ping.vehicle_id,
+                ping.route_id,
+                ping.lat,
+                ping.lng,
+                ping.speed,
+                ts,
+            )
         return {"status": "success", "vehicle": ping.vehicle_id}
     except Exception as e:
         logger.error("Error saving GPS ping for %s: %s", ping.vehicle_id, e)
@@ -55,11 +89,10 @@ async def get_live_buses():
     pool = _require_db()
 
     query = """
-        SELECT DISTINCT ON (vehicle_id)
-            vehicle_id, route_id, latitude, longitude, speed, time
-        FROM vehicle_logs
-        WHERE time > NOW() - INTERVAL '5 minutes'
-        ORDER BY vehicle_id, time DESC
+        SELECT vehicle_id, route_id, latitude, longitude, speed, last_update
+        FROM vehicle_latest_positions
+        WHERE last_update > NOW() - INTERVAL '5 minutes'
+        ORDER BY vehicle_id
     """
 
     try:
@@ -73,7 +106,7 @@ async def get_live_buses():
                 lat=row["latitude"],
                 lng=row["longitude"],
                 speed=row["speed"],
-                last_update=row["time"].isoformat(),
+                last_update=row["last_update"].isoformat(),
             )
             for row in rows
         ]

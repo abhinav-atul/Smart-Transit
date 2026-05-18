@@ -41,6 +41,8 @@ let selectedRouteId = null;
 let selectedBusId = null;
 let liveBusDataCache = {}; // Keeps latest bus data by id
 let pollTimer = null;
+let ws = null;
+let wsReconnectTimer = null;
 let apiOnline = false; // Connection status tracker
 
 // --- DOM ELEMENTS ---
@@ -87,6 +89,60 @@ function updateConnectionBadge(online) {
     }
 }
 
+function getWebSocketUrl() {
+    const apiUrl = new URL(API_BASE_URL);
+    const wsProtocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${wsProtocol}//${apiUrl.host}/ws/buses`;
+}
+
+function startPolling() {
+    if (!pollTimer) {
+        pollTimer = setInterval(fetchLiveBusData, POLL_INTERVAL_MS);
+    }
+}
+
+function stopPolling() {
+    if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+    }
+}
+
+function connectWebSocket() {
+    if (ws && ws.readyState === WebSocket.OPEN) return;
+
+    ws = new WebSocket(getWebSocketUrl());
+
+    ws.onopen = () => {
+        updateConnectionBadge(true);
+        stopPolling();
+        if (wsReconnectTimer) {
+            clearTimeout(wsReconnectTimer);
+            wsReconnectTimer = null;
+        }
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'bus_update' && Array.isArray(data.buses)) {
+            handleLiveBusUpdate(data.buses);
+        }
+    };
+
+    ws.onclose = () => {
+        updateConnectionBadge(false);
+        startPolling();
+        if (!wsReconnectTimer) {
+            wsReconnectTimer = setTimeout(() => {
+                wsReconnectTimer = null;
+                connectWebSocket();
+            }, 3000);
+        }
+    };
+
+    ws.onerror = () => ws.close();
+}
+
 
 // --- INITIALIZATION ---
 function initMap() {
@@ -100,8 +156,9 @@ async function main() {
     // Show skeleton loading while fetching
     showRouteSkeletons();
     await fetchAndProcessStaticData();
-    fetchLiveBusData(); 
-    pollTimer = setInterval(fetchLiveBusData, POLL_INTERVAL_MS); 
+    fetchLiveBusData();
+    startPolling();
+    connectWebSocket();
 }
 
 function showRouteSkeletons() {
@@ -258,26 +315,7 @@ async function fetchLiveBusData() {
         const res = await fetch(`${API_BASE_URL}/buses/live`);
         if (!res.ok) return;
         const liveBuses = await res.json();
-        const activeBusIds = new Set();
-        const formattedBuses = [];
-
-        liveBuses.forEach(bus => {
-            const busData = { id: bus.vehicle_id, routeId: bus.route_id, lat: bus.lat, lng: bus.lng, speed: bus.speed };
-            liveBusDataCache[busData.id] = busData; // Cache latest data
-            updateBusMarker(busData);
-            activeBusIds.add(busData.id);
-            formattedBuses.push(busData);
-        });
-
-        for (const busId in busMarkers) {
-            if (!activeBusIds.has(busId)) {
-                map.removeLayer(busMarkers[busId]);
-                delete busMarkers[busId];
-                delete liveBusDataCache[busId];
-            }
-        }
-        updateAuthorityList(formattedBuses);
-        updateConnectionBadge(true);
+        handleLiveBusUpdate(liveBuses);
     } catch (e) {
         updateConnectionBadge(false);
         // Show subtle offline indicator on fleet view
@@ -285,6 +323,30 @@ async function fetchLiveBusData() {
             busStatusList.innerHTML = `<div class="text-center py-6"><p class="text-sm text-red-500 dark:text-red-400 font-medium"><i class="fa-solid fa-wifi mr-1"></i> API Unreachable</p><p class="text-xs text-slate-400 mt-1">Retrying every ${POLL_INTERVAL_MS/1000}s...</p></div>`;
         }
     }
+}
+
+function handleLiveBusUpdate(liveBuses) {
+    const activeBusIds = new Set();
+    const formattedBuses = [];
+
+    liveBuses.forEach(bus => {
+        const busData = { id: bus.vehicle_id, routeId: bus.route_id, lat: bus.lat, lng: bus.lng, speed: bus.speed };
+        liveBusDataCache[busData.id] = busData;
+        updateBusMarker(busData);
+        activeBusIds.add(busData.id);
+        formattedBuses.push(busData);
+    });
+
+    for (const busId in busMarkers) {
+        if (!activeBusIds.has(busId)) {
+            map.removeLayer(busMarkers[busId]);
+            delete busMarkers[busId];
+            delete liveBusDataCache[busId];
+        }
+    }
+
+    updateAuthorityList(formattedBuses);
+    updateConnectionBadge(true);
 }
 
 // --- BUS SELECTION LOGIC ---
@@ -647,5 +709,10 @@ function toggleClearBtn(input, btn) {
 
 document.getElementById('sos-btn').addEventListener('click', () => sosModal.classList.remove('hidden'));
 document.getElementById('close-sos-modal-btn').addEventListener('click', () => sosModal.classList.add('hidden'));
+window.addEventListener('beforeunload', () => {
+    if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
+    stopPolling();
+    if (ws) ws.close();
+});
 
 initMap();

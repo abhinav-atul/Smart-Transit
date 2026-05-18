@@ -10,12 +10,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from backend.app.config import settings
 from backend.app.db.pool import create_pool, close_pool
+from backend.app.rate_limit import limiter
 from ml_engine.predictor import ETAPredictor
 
-from backend.app.routers import health, tracking, routes, eta, stats
+from backend.app.routers import auth, eta, health, routes, stats, tracking, websocket
 
 # --- Logging Setup ---
 logging.basicConfig(
@@ -62,6 +65,8 @@ app = FastAPI(
     version="2.1.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # --- Middleware ---
 app.add_middleware(
@@ -73,7 +78,9 @@ app.add_middleware(
 
 # --- Routers ---
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(tracking.router)
 app.include_router(routes.router)
 app.include_router(eta.router)
 app.include_router(stats.router)
+app.include_router(websocket.router)
