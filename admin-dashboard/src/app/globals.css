@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #020617; /* Slate 950 */
+  --color-foreground: #f8fafc; /* Slate 50 */
+  
+  --color-card: #0f172a; /* Slate 900 */
+  --color-card-foreground: #f8fafc;
+  
+  --color-primary: #3b82f6; /* Blue 500 */
+  --color-primary-foreground: #ffffff;
+  
+  --color-border: #1e293b; /* Slate 800 */
+  --color-input: #1e293b;
+  
+  --color-destructive: #ef4444; /* Red 500 */
+  --color-destructive-foreground: #f8fafc;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+.glass-panel {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}

@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS vehicle_latest_positions (
     latitude FLOAT,
     longitude FLOAT,
     speed FLOAT,
+    passenger_count INT DEFAULT 0,
     last_update TIMESTAMPTZ NOT NULL
 );
 

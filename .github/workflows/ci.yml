@@ -1,29 +1,149 @@
-name: CI
+name: Smart-Transit CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
     branches: [main]
 
 jobs:
-  test:
+  # ── Backend Tests ─────────────────────────────────────────────────────────────
+  backend-tests:
+    name: Backend Tests (Python)
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Set up Python
+    services:
+      timescaledb:
+        image: timescale/timescaledb:latest-pg14
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: secretpass123
+          POSTGRES_DB: transit_db
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+      - name: Initialize database schema
+        run: python scripts/setup_tables.py
+        env:
+          DATABASE_URL: postgresql://user:secretpass123@localhost:5433/transit_db
 
-      - name: Lint check
+      - name: Seed database with route data
+        run: python scripts/init_db_data.py
+        env:
+          DATABASE_URL: postgresql://user:secretpass123@localhost:5433/transit_db
+
+      - name: Run pytest with coverage
         run: |
-          pip install ruff
-          ruff check backend/ ml_engine/ simulation/ scripts/ tests/
+          pip install pytest-cov
+          pytest tests/ -v \
+            --cov=backend \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --tb=short
+        env:
+          DATABASE_URL: postgresql://user:secretpass123@localhost:5433/transit_db
+          SIMULATOR_API_KEY: sim-key-change-me
+          JWT_SECRET: ci-test-secret
+          ADMIN_USERNAME: admin
+          ADMIN_PASSWORD: admin123
+          ML_MODEL_PATH: ml_engine/eta_model.pkl
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # ── Admin Dashboard Build ─────────────────────────────────────────────────────
+  admin-build:
+    name: Admin Dashboard Build (Next.js)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: admin-dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: admin-dashboard
+
+      - name: Type check
+        run: npm run build
+        working-directory: admin-dashboard
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-dashboard-build
+          path: admin-dashboard/.next/
+          retention-days: 3
+
+  # ── Docker Compose Smoke Test ─────────────────────────────────────────────────
+  docker-smoke-test:
+    name: Docker Compose Smoke Test
+    runs-on: ubuntu-latest
+    needs: backend-tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose build db api
+
+      - name: Start DB + API
+        run: docker compose up -d db api
+
+      - name: Wait for API health
+        run: |
+          echo "Waiting for API to be healthy..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then
+              echo "API is up!"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API failed to start" && docker compose logs api && exit 1
+
+      - name: Run smoke test
+        run: |
+          STATUS=$(curl -s http://localhost:8000/health | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['status'])")
+          echo "Health status: $STATUS"
+          [ "$STATUS" = "online" ] || exit 1
+
+      - name: Collect logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
