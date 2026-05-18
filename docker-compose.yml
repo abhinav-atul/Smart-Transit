@@ -3,8 +3,35 @@ services:
     image: timescale/timescaledb:latest-pg14
     environment:
       POSTGRES_USER: user
-      POSTGRES_PASSWORD: secretpass123
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secretpass123}
       POSTGRES_DB: transit_db
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5433:5432"
+    volumes:
+      - transit_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d transit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://user:${DB_PASSWORD:-secretpass123}@db:5432/transit_db
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      FRONTEND_ORIGIN: http://localhost:5500
+      ML_MODEL_PATH: ml_engine/eta_model.pkl
+      LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  transit_db_data:

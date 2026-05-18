@@ -1,18 +1,37 @@
 // --- CONFIGURATION ---
 const API_BASE_URL = "http://localhost:8000";
-const BUS_ICON_URL = "https://img.icons8.com/?size=100&id=15158&format=png&color=000000";
+const BUS_ICON_URL = "assets/bus-icon.svg";
+const POLL_INTERVAL_MS = 2000;
 
 const TILE_LAYERS = {
     dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
 };
 
+// Route color palette — distinct colors for each route
+const ROUTE_COLORS = [
+    '#3b82f6', // blue
+    '#ef4444', // red
+    '#10b981', // emerald
+    '#f59e0b', // amber
+    '#8b5cf6', // violet
+    '#ec4899', // pink
+    '#06b6d4', // cyan
+    '#f97316', // orange
+];
+const SELECTED_ROUTE_WEIGHT = 7;
+const DEFAULT_ROUTE_WEIGHT = 4;
+const SELECTED_ROUTE_OPACITY = 1;
+const DEFAULT_ROUTE_OPACITY = 0.55;
+
 // --- GLOBALS ---
 let map;
 let currentTileLayer = null;
 let busMarkers = {};        
 let routePolylines = {};    
+let routeColorMap = {};     // routeId -> color
 let stopMarkers = [];       
+let stopLabelMarkers = [];  // permanent tooltip labels for stops
 let userLocationMarker = null;
 let markerAnimFrames = {}; 
 let allRoutesData = {};
@@ -20,6 +39,9 @@ let allAvailableStops = []; // Array of { name, lat, lng }
 let stopToRoutesMap = new Map();
 let selectedRouteId = null;
 let selectedBusId = null;
+let liveBusDataCache = {}; // Keeps latest bus data by id
+let pollTimer = null;
+let apiOnline = false; // Connection status tracker
 
 // --- DOM ELEMENTS ---
 const finderBtn = document.getElementById('finder-view-btn');
@@ -50,6 +72,20 @@ const sosModal = document.getElementById('sos-modal');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const userLocBtn = document.getElementById('user-location-btn');
 const stopsDatalist = document.getElementById('stops-datalist');
+const connectionBadge = document.getElementById('connection-badge');
+const connectionText = document.getElementById('connection-text');
+
+// --- CONNECTION STATUS ---
+function updateConnectionBadge(online) {
+    apiOnline = online;
+    if (online) {
+        connectionBadge.className = 'status-badge online';
+        connectionText.textContent = 'Live';
+    } else {
+        connectionBadge.className = 'status-badge offline';
+        connectionText.textContent = 'Offline';
+    }
+}
 
 
 // --- INITIALIZATION ---
@@ -61,9 +97,23 @@ function initMap() {
 }
 
 async function main() {
+    // Show skeleton loading while fetching
+    showRouteSkeletons();
     await fetchAndProcessStaticData();
-    setInterval(fetchLiveBusData, 2000); 
     fetchLiveBusData(); 
+    pollTimer = setInterval(fetchLiveBusData, POLL_INTERVAL_MS); 
+}
+
+function showRouteSkeletons() {
+    routeList.innerHTML = Array(3).fill(0).map(() => `
+        <div class="skeleton skeleton-card"></div>
+    `).join('');
+}
+
+function showFinderSkeletons() {
+    finderResultsList.innerHTML = Array(2).fill(0).map(() => `
+        <div class="skeleton skeleton-card"></div>
+    `).join('');
 }
 
 // --- THEME ---
@@ -89,22 +139,52 @@ async function fetchAndProcessStaticData() {
         if (!response.ok) throw new Error("API Offline");
         const data = await response.json();
         allRoutesData = data.routes;
+        updateConnectionBadge(true);
         processRouteDataForUI();
         renderRouteListUI();
     } catch (e) {
-        routeList.innerHTML = `<div class="p-4 rounded-xl bg-red-50 text-red-600 text-sm">Failed to load routes.</div>`;
+        updateConnectionBadge(false);
+        routeList.innerHTML = `<div class="p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-center gap-3 fade-in">
+            <i class="fa-solid fa-circle-exclamation text-lg"></i>
+            <div>
+                <p class="font-semibold">Backend Offline</p>
+                <p class="text-xs opacity-80 mt-0.5">Ensure the API is running on port 8000</p>
+            </div>
+        </div>`;
     }
 }
 
 function processRouteDataForUI() {
     stopsDatalist.innerHTML = '';
-    allAvailableStops = []; // Reset global stops array
+    allAvailableStops = [];
     stopToRoutesMap = new Map();
+    routeColorMap = {};
 
+    let colorIdx = 0;
     Object.entries(allRoutesData).forEach(([routeId, routeData]) => {
+        // Assign a unique color to each route
+        const routeColor = ROUTE_COLORS[colorIdx % ROUTE_COLORS.length];
+        routeColorMap[routeId] = routeColor;
+        colorIdx++;
+
         if (routeData.stops.length > 1) {
             const pathCoords = routeData.stops.map(s => [s.lat, s.lng]);
-            routePolylines[routeId] = L.polyline(pathCoords, { color: '#3b82f6', weight: 5, opacity: 0.8 });
+            routePolylines[routeId] = L.polyline(pathCoords, {
+                color: routeColor,
+                weight: DEFAULT_ROUTE_WEIGHT,
+                opacity: DEFAULT_ROUTE_OPACITY,
+                routeId: routeId
+            });
+
+            // Click polyline on the map to select the route
+            routePolylines[routeId].on('click', () => {
+                selectedBusId = null;
+                selectedBusCard.classList.add('hidden');
+                toggleRouteSelection(routeId);
+            });
+
+            // Show all polylines on map so user can see & click them
+            routePolylines[routeId].addTo(map);
             
             fetchRouteShape(routeData.stops).then(latLngs => {
                 if (latLngs && routePolylines[routeId]) routePolylines[routeId].setLatLngs(latLngs);
@@ -112,7 +192,7 @@ function processRouteDataForUI() {
         }
         routeData.stops.forEach(stop => {
             if (!stopToRoutesMap.has(stop.name)) {
-                allAvailableStops.push({ name: stop.name, lat: stop.lat, lng: stop.lng }); // Store for ETA calc
+                allAvailableStops.push({ name: stop.name, lat: stop.lat, lng: stop.lng });
                 
                 const option = document.createElement('option');
                 option.value = stop.name;
@@ -120,6 +200,41 @@ function processRouteDataForUI() {
                 stopToRoutesMap.set(stop.name, []);
             }
             stopToRoutesMap.get(stop.name).push(routeId);
+        });
+    });
+
+    // Add permanent stop name labels on the map for ALL stops
+    addStopLabelsToMap();
+}
+
+function addStopLabelsToMap() {
+    // Clear old labels
+    stopLabelMarkers.forEach(m => map.removeLayer(m));
+    stopLabelMarkers = [];
+
+    const placed = new Set(); // avoid duplicate labels for shared stops
+    Object.entries(allRoutesData).forEach(([routeId, routeData]) => {
+        const color = routeColorMap[routeId] || '#3b82f6';
+        routeData.stops.forEach(stop => {
+            const key = `${stop.name}_${stop.lat}_${stop.lng}`;
+            if (placed.has(key)) return;
+            placed.add(key);
+
+            // Small circle dot for the stop
+            const dot = L.circleMarker([stop.lat, stop.lng], {
+                radius: 5, fillColor: color, fillOpacity: 0.9, color: '#fff', weight: 1.5
+            }).addTo(map);
+
+            // Permanent label
+            dot.bindTooltip(stop.name, {
+                permanent: true,
+                direction: 'right',
+                offset: [8, 0],
+                className: 'stop-label-tooltip'
+            });
+
+            dot.bindPopup(`<b>${stop.name}</b>`);
+            stopLabelMarkers.push(dot);
         });
     });
 }
@@ -148,6 +263,7 @@ async function fetchLiveBusData() {
 
         liveBuses.forEach(bus => {
             const busData = { id: bus.vehicle_id, routeId: bus.route_id, lat: bus.lat, lng: bus.lng, speed: bus.speed };
+            liveBusDataCache[busData.id] = busData; // Cache latest data
             updateBusMarker(busData);
             activeBusIds.add(busData.id);
             formattedBuses.push(busData);
@@ -157,10 +273,18 @@ async function fetchLiveBusData() {
             if (!activeBusIds.has(busId)) {
                 map.removeLayer(busMarkers[busId]);
                 delete busMarkers[busId];
+                delete liveBusDataCache[busId];
             }
         }
         updateAuthorityList(formattedBuses);
-    } catch (e) {}
+        updateConnectionBadge(true);
+    } catch (e) {
+        updateConnectionBadge(false);
+        // Show subtle offline indicator on fleet view
+        if (busStatusList.children.length === 0) {
+            busStatusList.innerHTML = `<div class="text-center py-6"><p class="text-sm text-red-500 dark:text-red-400 font-medium"><i class="fa-solid fa-wifi mr-1"></i> API Unreachable</p><p class="text-xs text-slate-400 mt-1">Retrying every ${POLL_INTERVAL_MS/1000}s...</p></div>`;
+        }
+    }
 }
 
 // --- BUS SELECTION LOGIC ---
@@ -173,10 +297,21 @@ function selectBus(busData) {
     updateBusDetailCard(busData);
 }
 
+async function fetchMLEta(distanceMeters, speedKmh) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/eta?distance_meters=${distanceMeters}&current_speed_kmh=${Math.max(speedKmh, 5)}`);
+        if (res.ok) {
+            const data = await res.json();
+            return data.prediction;
+        }
+    } catch (e) { /* fallback below */ }
+    return null;
+}
+
 function updateBusDetailCard(busData) {
     if (!busData) return;
     
-    // Calculate ETA
+    // Calculate ETA (client-side fallback)
     const route = allRoutesData[busData.routeId];
     let etaText = "-- min";
     let nextStopName = "Calculating...";
@@ -200,6 +335,15 @@ function updateBusDetailCard(busData) {
             const speed = Math.max(busData.speed, 30);
             const seconds = minDist / (speed * 1000 / 3600);
             etaText = minDist < 50 ? "Arrived" : `${Math.ceil(seconds / 60)} min`;
+
+            // Try ML ETA in background (non-blocking)
+            if (minDist >= 50) {
+                fetchMLEta(minDist, busData.speed).then(mlEta => {
+                    if (mlEta && selectedBusId === busData.id) {
+                        busDetailEta.textContent = mlEta;
+                    }
+                });
+            }
         }
     }
 
@@ -211,7 +355,7 @@ function updateBusDetailCard(busData) {
 
 function updateBusMarker(busData) {
     const busIcon = L.icon({
-        iconUrl: BUS_ICON_URL, iconSize: [50, 50], iconAnchor: [25, 25]
+        iconUrl: BUS_ICON_URL, iconSize: [40, 40], iconAnchor: [20, 20]
     });
 
     if (busMarkers[busData.id]) {
@@ -221,10 +365,14 @@ function updateBusMarker(busData) {
         }
     } else {
         const marker = L.marker([busData.lat, busData.lng], {
-            icon: busIcon, busId: busData.id, busData: busData
+            icon: busIcon, busId: busData.id
         }).addTo(map);
 
-        marker.on('click', () => selectBus(busData));
+        // Use cached data on click so it's always fresh
+        marker.on('click', () => {
+            const latestData = liveBusDataCache[busData.id];
+            if (latestData) selectBus(latestData);
+        });
         busMarkers[busData.id] = marker;
     }
 }
@@ -256,10 +404,21 @@ function animateMarkerTo(marker, newLat, newLng, duration = 2000) {
 function toggleRouteSelection(routeId) {
     const isSelected = selectedRouteId === routeId;
     
-    if (selectedRouteId && routePolylines[selectedRouteId]) {
-        map.removeLayer(routePolylines[selectedRouteId]);
+    // Reset ALL polylines to default (dimmed) style
+    Object.entries(routePolylines).forEach(([rid, poly]) => {
+        poly.setStyle({
+            weight: DEFAULT_ROUTE_WEIGHT,
+            opacity: DEFAULT_ROUTE_OPACITY,
+            color: routeColorMap[rid] || '#3b82f6'
+        });
+    });
+
+    // Reset previously selected sidebar item
+    if (selectedRouteId) {
         document.getElementById(`route-item-${selectedRouteId}`)?.classList.remove('border-blue-500', 'bg-blue-50', 'dark:border-brand-500', 'dark:bg-brand-900/20');
     }
+
+    // Clear stop detail markers from previous selection
     stopMarkers.forEach(m => map.removeLayer(m)); 
     stopMarkers = [];
     document.getElementById('route-details-view').classList.add('hidden');
@@ -272,7 +431,13 @@ function toggleRouteSelection(routeId) {
     selectedRouteId = routeId;
     const poly = routePolylines[routeId];
     if (poly) {
-        poly.addTo(map);
+        // Highlight selected route: thicker, full opacity, bring to front
+        poly.setStyle({
+            weight: SELECTED_ROUTE_WEIGHT,
+            opacity: SELECTED_ROUTE_OPACITY,
+            color: routeColorMap[routeId] || '#3b82f6'
+        });
+        poly.bringToFront();
         map.fitBounds(poly.getBounds(), { padding: [50, 50] });
     }
     
@@ -288,12 +453,14 @@ function toggleRouteSelection(routeId) {
 function renderStopTimeline(routeId) {
     const stopListEl = document.getElementById('stop-list');
     stopListEl.innerHTML = '';
+    const color = routeColorMap[routeId] || '#3b82f6';
     
     allRoutesData[routeId].stops.forEach((stop, idx) => {
+        // Larger highlighted stop dot for the selected route
         const marker = L.circleMarker([stop.lat, stop.lng], {
-            radius: 6, fillColor: "#1e293b", fillOpacity: 1, color: "#3b82f6", weight: 2
+            radius: 8, fillColor: color, fillOpacity: 1, color: '#fff', weight: 3
         }).addTo(map);
-        marker.bindPopup(`<b>${stop.name}</b>`);
+        marker.bindPopup(`<b>${stop.name}</b><br><span style="color:${color}">${allRoutesData[routeId].routeName}</span>`);
         stopMarkers.push(marker);
         
         const isLast = idx === allRoutesData[routeId].stops.length - 1;
@@ -312,13 +479,19 @@ function renderStopTimeline(routeId) {
 function renderRouteListUI() {
     routeList.innerHTML = '';
     Object.entries(allRoutesData).forEach(([routeId, routeData]) => {
+        const color = routeColorMap[routeId] || '#3b82f6';
         const el = document.createElement('div');
         el.className = 'group p-4 rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between border bg-white border-slate-100 hover:border-blue-200 hover:shadow-md dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:hover:border-brand-500/30 dark:shadow-none';
         el.id = `route-item-${routeId}`;
         el.innerHTML = `
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm bg-blue-50 text-blue-600 dark:bg-brand-500/20 dark:text-brand-500">${routeId.replace('AS-', '')}</div>
-                <div><h4 class="font-semibold text-sm text-slate-800 dark:text-slate-200">${routeData.routeName}</h4></div>
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm" style="background:${color}20; color:${color}">
+                    <div class="w-3 h-3 rounded-full" style="background:${color}"></div>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-sm text-slate-800 dark:text-slate-200">${routeData.routeName}</h4>
+                    <p class="text-[10px] text-slate-400">${routeData.stops.length} stops</p>
+                </div>
             </div>
             <i class="fa-solid fa-chevron-right text-slate-300 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-brand-500"></i>
         `;
@@ -350,7 +523,8 @@ function updateAuthorityList(buses) {
         el.addEventListener('click', () => {
              if (busMarkers[bus.id]) {
                  map.flyTo(busMarkers[bus.id].getLatLng(), 16);
-                 selectBus(bus);
+                 const latestData = liveBusDataCache[bus.id] || bus;
+                 selectBus(latestData);
              }
         });
         busStatusList.appendChild(el);
@@ -360,7 +534,7 @@ function updateAuthorityList(buses) {
 // --- FINDER LOGIC (UPDATED TO SHOW BUSES) ---
 
 findBusesBtn.addEventListener('click', () => {
-    finderResultsList.innerHTML = `<div class="flex justify-center p-4"><i class="fa-solid fa-circle-notch fa-spin text-blue-500"></i></div>`;
+    showFinderSkeletons();
     
     const sName = startInput.value;
     const eName = endInput.value;
@@ -382,8 +556,9 @@ findBusesBtn.addEventListener('click', () => {
     const startStopData = allAvailableStops.find(s => s.name === sName);
     const startLatLng = startStopData ? L.latLng(startStopData.lat, startStopData.lng) : null;
 
-    Object.values(busMarkers).forEach(marker => {
-        const bus = marker.options.busData;
+    Object.entries(busMarkers).forEach(([busId, marker]) => {
+        const bus = liveBusDataCache[busId];
+        if (!bus) return;
         if (commonRoutes.includes(bus.routeId)) {
             // Calculate ETA to Start Stop
             let etaSeconds = 0;

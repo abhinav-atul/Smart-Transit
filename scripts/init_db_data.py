@@ -1,94 +1,88 @@
+"""
+Database seed script — loads route and stop data from config.json.
+Idempotent: safe to run multiple times.
+
+Run from project root: python scripts/init_db_data.py
+"""
+
 import json
 import asyncio
 import asyncpg
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-# --- CONFIGURATION ---
-# DB_DSN updated to use 127.0.0.1 for better Docker compatibility
-DB_DSN = "postgresql://user@localhost:5433/transit_db"
-# CONFIG_FILE path corrected to relative location
-CONFIG_FILE = "simulation/data/config.json"
+# Load .env from project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_ROOT / ".env")
+
+DB_DSN = os.getenv("DATABASE_URL", "postgresql://user:secretpass123@localhost:5433/transit_db")
+CONFIG_FILE = PROJECT_ROOT / "simulation" / "data" / "config.json"
+
 
 async def populate_database():
-    print(f"📂 Loading data from {CONFIG_FILE}...")
-    
-    # 1. Load JSON Data
-    if not os.path.exists(CONFIG_FILE):
-        print(f"❌ Error: {CONFIG_FILE} not found!")
+    if not CONFIG_FILE.exists():
+        print(f"Error: {CONFIG_FILE} not found!")
         return
 
-    with open(CONFIG_FILE, 'r') as f:
-        config = json.load(f)
+    config = json.loads(CONFIG_FILE.read_text())
 
-    # 2. Connection Logic with Asynchronous Retry (FIX for "Connection refused")
-    print("🔌 Connecting to Database...")
+    print("Connecting to database...")
     conn = None
     max_retries = 10
     retry_delay = 3
 
     for i in range(max_retries):
         try:
-            print(f"   Attempt {i + 1}/{max_retries}...")
-            # Connect to PostgreSQL
             conn = await asyncpg.connect(DB_DSN)
-            print("   Connection established!")
-            break  # Connection successful, exit the retry loop
+            print("Connected.")
+            break
         except Exception as e:
             if i < max_retries - 1:
-                print(f"❌ Connection failed: {e}. Retrying in {retry_delay}s...")
+                print(f"Attempt {i+1}/{max_retries} failed: {e}. Retrying in {retry_delay}s...")
                 await asyncio.sleep(retry_delay)
             else:
-                print(f"❌ Connection failed after {max_retries} attempts: {e}")
-                print("   (Make sure 'docker-compose up' is running and Docker is running)")
-                return # Exit the function if all retries fail
+                print(f"Failed after {max_retries} attempts: {e}")
+                print("Make sure Docker is running: docker compose up -d")
+                return
 
     if conn is None:
-        return # Could not establish connection
+        return
 
-    print("🚀 Inserting Routes and Stops...")
-    
-    # 3. Insertion Logic
+    print("Inserting routes and stops...")
+
     try:
-        # Start a transaction to ensure all or nothing
         async with conn.transaction():
-            
-            # Loop through each route in config.json
-            for route_id, route_data in config['routes'].items():
-                route_name = route_data['routeName']
-                
-                # A. Insert Route
+            for route_id, route_data in config["routes"].items():
+                route_name = route_data["routeName"]
+
                 await conn.execute("""
-                    INSERT INTO routes (route_id, route_name) 
+                    INSERT INTO routes (route_id, route_name)
                     VALUES ($1, $2)
-                    ON CONFLICT (route_id) DO UPDATE 
+                    ON CONFLICT (route_id) DO UPDATE
                     SET route_name = EXCLUDED.route_name
                 """, route_id, route_name)
-                
-                print(f"   -> Added Route: {route_name} ({route_id})")
 
-                # B. Insert Stops for this Route
-                stops = route_data.get('stops', [])
-                for idx, stop in enumerate(stops):
-                    stop_name = stop['name']
-                    lat = stop['coords'][0]
-                    lng = stop['coords'][1]
-                    
+                print(f"  -> Route: {route_name} ({route_id})")
+
+                await conn.execute("DELETE FROM stops WHERE route_id = $1", route_id)
+
+                for idx, stop in enumerate(route_data.get("stops", [])):
                     await conn.execute("""
                         INSERT INTO stops (route_id, stop_name, latitude, longitude, stop_sequence)
                         VALUES ($1, $2, $3, $4, $5)
-                    """, route_id, stop_name, lat, lng, idx)
-                    
-        print("\n✅ Success! Database populated successfully.")
+                    """, route_id, stop["name"], stop["coords"][0], stop["coords"][1], idx)
+
+        print("Database populated successfully!")
 
     except Exception as e:
-        print(f"\n❌ Database Error: {e}")
-    
+        print(f"Database error: {e}")
     finally:
         if conn:
             await conn.close()
 
+
 if __name__ == "__main__":
-    # Python 3.7+ approach to running async main
     try:
         asyncio.run(populate_database())
     except KeyboardInterrupt:

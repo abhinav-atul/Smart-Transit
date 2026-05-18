@@ -1,38 +1,47 @@
+"""
+Database schema creation script.
+Run from project root: python scripts/setup_tables.py
+"""
+
 import asyncio
 import asyncpg
 import os
+import sys
+from pathlib import Path
+from dotenv import load_dotenv
 
-# Database Connection String
-DB_DSN = "postgresql://user@localhost:5433/transit_db"
-# Path to your schema file
-SCHEMA_FILE = "backend/app/db/schema.sql"
+# Load .env from project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_ROOT / ".env")
+
+DB_DSN = os.getenv("DATABASE_URL", "postgresql://user:secretpass123@localhost:5433/transit_db")
+SCHEMA_FILE = PROJECT_ROOT / "backend" / "app" / "db" / "schema.sql"
+
 
 async def create_tables():
-    print(f"🔌 Connecting to Database at {DB_DSN}...")
+    print(f"Connecting to database...")
     try:
         conn = await asyncpg.connect(DB_DSN)
     except Exception as e:
-        print(f"❌ Connection Failed: {e}")
+        print(f"Connection failed: {e}")
+        print("Make sure Docker is running: docker compose up -d")
         return
 
-    print(f"📂 Reading schema from {SCHEMA_FILE}...")
-    if not os.path.exists(SCHEMA_FILE):
-        print(f"❌ Error: Schema file not found at {SCHEMA_FILE}")
-        print("   Make sure you are running this script from the project root folder.")
+    if not SCHEMA_FILE.exists():
+        print(f"Error: Schema file not found at {SCHEMA_FILE}")
         return
 
-    with open(SCHEMA_FILE, 'r') as f:
-        schema_sql = f.read()
+    schema_sql = SCHEMA_FILE.read_text()
 
-    print("🚀 Creating Tables...")
+    print("Creating tables...")
     try:
-        # asyncpg allows executing a script with multiple statements
         await conn.execute(schema_sql)
-        print("✅ Tables created successfully!")
+        print("Tables created successfully!")
     except Exception as e:
-        print(f"❌ SQL Execution Error: {e}")
+        print(f"SQL execution error: {e}")
     finally:
         await conn.close()
+
 
 if __name__ == "__main__":
     asyncio.run(create_tables())

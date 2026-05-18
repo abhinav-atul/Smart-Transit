@@ -20,8 +20,9 @@
         extend: {
           fontFamily: { sans: ['Inter', 'sans-serif'] },
           colors: {
-            brand: { 500: '#3b82f6', 600: '#2563eb' },
-            dark: { 800: '#1e293b', 900: '#0f172a' }
+            brand: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+            surface: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0' },
+            dark: { 700: '#334155', 800: '#1e293b', 850: '#172033', 900: '#0f172a', 950: '#0a0f1a' }
           }
         }
       }
@@ -32,15 +33,15 @@
   <link rel="stylesheet" href="assets/style.css">
 </head>
 
-<body class="bg-slate-50 dark:bg-gray-900 text-slate-800 dark:text-slate-200 overflow-hidden relative w-full h-screen transition-colors duration-300">
+<body class="bg-slate-100 dark:bg-dark-950 text-slate-800 dark:text-slate-200 overflow-hidden relative w-full h-screen transition-colors duration-300">
 
-  <div id="map" class="absolute inset-0 z-0 focus:outline-none bg-slate-200 dark:bg-slate-900"></div>
+  <div id="map" class="absolute inset-0 z-0 focus:outline-none bg-slate-200 dark:bg-dark-950"></div>
 
   <aside id="ui-panel" class="absolute top-4 left-4 bottom-4 w-full max-w-md flex flex-col z-[1000] transition-transform duration-300 pointer-events-none">
     
-    <div class="glass-card flex flex-col h-full pointer-events-auto rounded-3xl overflow-hidden shadow-2xl border border-white/20 dark:border-white/10 ring-1 ring-black/5">
+    <div class="glass-card flex flex-col h-full pointer-events-auto rounded-3xl overflow-hidden shadow-2xl border border-slate-200/80 dark:border-white/[0.06] ring-1 ring-black/[0.03] dark:ring-white/[0.03]">
       
-      <div class="p-6 border-b border-slate-200 dark:border-white/5 bg-white/80 dark:bg-white/5 backdrop-blur-md shrink-0">
+      <div class="p-6 border-b border-slate-200/80 dark:border-white/[0.06] bg-white/90 dark:bg-white/[0.03] backdrop-blur-xl shrink-0">
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white">
@@ -52,12 +53,18 @@
             </div>
           </div>
           
-          <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">
-            <i class="fa-solid fa-moon"></i>
-          </button>
+          <div class="flex items-center gap-2">
+            <span id="connection-badge" class="status-badge offline">
+              <span class="status-dot"></span>
+              <span id="connection-text">Connecting</span>
+            </span>
+            <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">
+              <i class="fa-solid fa-moon"></i>
+            </button>
+          </div>
         </div>
 
-        <nav class="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-white/5 p-1.5 rounded-xl mt-6 border border-slate-200 dark:border-white/10">
+        <nav class="grid grid-cols-3 gap-1 bg-slate-100/80 dark:bg-white/[0.04] p-1.5 rounded-xl mt-6 border border-slate-200/60 dark:border-white/[0.06]">
           <button id="finder-view-btn" class="tab-btn active" onclick="switchView('finder')">
             <i class="fa-solid fa-search"></i> <span>Finder</span>
           </button>
@@ -70,10 +77,10 @@
         </nav>
       </div>
 
-      <div id="panel-content" class="flex-1 overflow-y-auto custom-scrollbar p-6 relative bg-white/50 dark:bg-transparent">
+      <div id="panel-content" class="flex-1 overflow-y-auto custom-scrollbar p-6 relative bg-white/60 dark:bg-transparent">
         
         <div id="finder-view" class="view-section">
-          <div class="relative bg-white dark:bg-white/5 rounded-2xl p-4 border border-slate-200 dark:border-white/10 shadow-sm">
+          <div class="relative bg-white dark:bg-white/[0.04] rounded-2xl p-4 border border-slate-200/80 dark:border-white/[0.07] shadow-sm dark:shadow-none">
             <div class="absolute left-[27px] top-10 bottom-10 w-0.5 bg-gradient-to-b from-blue-500/50 to-red-500/50 z-0 rounded-full"></div>
             
             <div class="relative z-10 mb-3">
@@ -81,14 +88,14 @@
                  <div class="w-3 h-3 rounded-full border-[2.5px] border-blue-500 bg-white dark:bg-slate-900 shadow-sm"></div>
               </div>
               <input type="text" id="start-location-input" list="stops-datalist" placeholder="Current Location"
-                class="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-9 pr-8 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all">
-              <button id="clear-start-btn" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                class="w-full bg-slate-50/80 dark:bg-black/25 border border-slate-200/80 dark:border-white/[0.08] rounded-xl py-3 pl-9 pr-8 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 dark:focus:ring-blue-400/30 transition-all">
+              <button id="clear-start-btn" title="Clear start" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <i class="fa-solid fa-xmark text-[10px] bg-slate-200 dark:bg-white/20 rounded-full w-4 h-4 flex items-center justify-center"></i>
               </button>
             </div>
 
             <div class="absolute right-4 top-1/2 -translate-y-1/2 z-20">
-               <button id="swap-locations-btn" class="w-8 h-8 bg-white dark:bg-slate-700 border border-slate-200 dark:border-white/20 rounded-full shadow-md flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-white/10 transition-all active:rotate-180">
+               <button id="swap-locations-btn" title="Swap locations" class="w-8 h-8 bg-white dark:bg-dark-700 border border-slate-200/80 dark:border-white/10 rounded-full shadow-md dark:shadow-lg dark:shadow-black/20 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-dark-800 transition-all active:rotate-180">
                  <i class="fa-solid fa-arrow-right-arrow-left rotate-90 text-xs"></i>
                </button>
             </div>
@@ -98,8 +105,8 @@
                  <i class="fa-solid fa-location-dot text-red-500 text-sm drop-shadow-sm"></i>
               </div>
               <input type="text" id="end-location-input" list="stops-datalist" placeholder="Where to?"
-                class="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-9 pr-8 text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all">
-              <button id="clear-end-btn" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                class="w-full bg-slate-50/80 dark:bg-black/25 border border-slate-200/80 dark:border-white/[0.08] rounded-xl py-3 pl-9 pr-8 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 dark:focus:ring-blue-400/30 transition-all">
+              <button id="clear-end-btn" title="Clear destination" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <i class="fa-solid fa-xmark text-[10px] bg-slate-200 dark:bg-white/20 rounded-full w-4 h-4 flex items-center justify-center"></i>
               </button>
             </div>
@@ -107,7 +114,7 @@
 
           <datalist id="stops-datalist"></datalist>
 
-          <button id="find-buses-btn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all active:scale-95">
+          <button id="find-buses-btn" class="mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-blue-600/25 dark:shadow-blue-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.97]">
             <span>Find Best Route</span>
             <i class="fa-solid fa-arrow-right"></i>
           </button>
@@ -126,19 +133,19 @@
           <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Available Lines</h3>
           <div id="route-list" class="space-y-2"></div>
           
-          <div id="route-details-view" class="hidden mt-6 pt-6 border-t border-slate-200 dark:border-white/10">
+          <div id="route-details-view" class="hidden mt-6 pt-6 border-t border-slate-200/80 dark:border-white/[0.07]">
             <div class="flex justify-between items-center mb-4">
               <h3 id="route-details-title" class="text-lg font-bold text-slate-800 dark:text-white"></h3>
               <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400 border border-green-200 dark:border-green-500/30">ACTIVE</span>
             </div>
 
-            <div id="selected-bus-card" class="hidden mb-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 transition-all animate-enter">
+            <div id="selected-bus-card" class="hidden mb-6 p-4 rounded-xl bg-blue-50/80 dark:bg-blue-500/[0.08] border border-blue-100 dark:border-blue-400/15 transition-all animate-enter">
                 <div class="flex justify-between items-start mb-2">
                     <div>
                         <p class="text-[10px] uppercase font-bold text-blue-500 dark:text-blue-400 tracking-wider">Selected Vehicle</p>
                         <h4 id="bus-detail-id" class="text-base font-bold text-slate-800 dark:text-white mt-0.5">--</h4>
                     </div>
-                    <span id="bus-detail-speed" class="font-mono text-xs font-bold text-blue-600 dark:text-blue-300 bg-white dark:bg-blue-500/20 px-2 py-1 rounded-lg">-- km/h</span>
+                    <span id="bus-detail-speed" class="font-mono text-xs font-bold text-blue-600 dark:text-blue-300 bg-white dark:bg-blue-500/15 px-2 py-1 rounded-lg border border-blue-100/50 dark:border-blue-400/10">-- km/h</span>
                 </div>
                 
                 <div class="flex items-center gap-3 mt-3 pt-3 border-t border-blue-100 dark:border-white/5">
@@ -153,7 +160,7 @@
                 </div>
             </div>
 
-            <div id="stop-list" class="relative pl-4 border-l border-slate-300 dark:border-white/10 space-y-6"></div>
+            <div id="stop-list" class="relative pl-4 border-l-2 border-slate-200 dark:border-white/[0.08] space-y-6"></div>
           </div>
         </div>
 
@@ -166,8 +173,8 @@
         </div>
       </div>
 
-      <div class="p-4 border-t border-slate-200 dark:border-white/5 bg-white/80 dark:bg-black/20 shrink-0 flex gap-3 backdrop-blur-md">
-        <button id="sos-btn" class="flex-1 py-3 rounded-xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 font-semibold text-sm border border-red-200 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 transition-all flex justify-center items-center gap-2">
+      <div class="p-4 border-t border-slate-200/80 dark:border-white/[0.06] bg-white/90 dark:bg-black/25 shrink-0 flex gap-3 backdrop-blur-xl">
+        <button id="sos-btn" class="flex-1 py-3 rounded-xl bg-red-50/80 text-red-600 dark:bg-red-500/[0.08] dark:text-red-400 font-semibold text-sm border border-red-200/60 dark:border-red-500/15 hover:bg-red-100 dark:hover:bg-red-500/15 transition-all flex justify-center items-center gap-2">
           <i class="fa-solid fa-triangle-exclamation"></i> Emergency SOS
         </button>
       </div>
@@ -181,12 +188,12 @@
   </div>
 
   <div id="sos-modal" class="hidden fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-4">
-    <div class="bg-white dark:bg-slate-900 max-w-sm w-full p-8 rounded-3xl text-center border border-red-100 dark:border-red-500/30 shadow-2xl">
+    <div class="bg-white dark:bg-dark-850 max-w-sm w-full p-8 rounded-3xl text-center border border-red-100 dark:border-red-500/20 shadow-2xl dark:shadow-black/40">
       <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center mx-auto mb-4 animate-pulse">
         <i class="fa-solid fa-bell text-red-600 dark:text-red-500 text-3xl"></i>
       </div>
       <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">SOS Broadcasted</h2>
-      <button id="close-sos-modal-btn" class="w-full py-3 bg-slate-100 dark:bg-white text-slate-900 dark:text-black font-bold rounded-xl hover:bg-slate-200 transition">Dismiss Alert</button>
+      <button id="close-sos-modal-btn" class="w-full py-3 bg-slate-100 dark:bg-slate-100 text-slate-900 dark:text-slate-900 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-white transition">Dismiss Alert</button>
     </div>
   </div>
 

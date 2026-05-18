@@ -1,178 +1,232 @@
-# 🚍 Smart Transit System
+# Smart Transit System
 
-A real-time intelligent transit navigation system featuring live bus tracking, route optimization, and a modern dashboard. This project uses a **FastAPI** backend, **Vanilla JavaScript** frontend, and **TimescaleDB (PostgreSQL)** for time-series data storage.
+A real-time intelligent transit navigation system featuring live bus tracking, ML-powered ETA prediction, route optimization, and a modern glassmorphism dashboard.
 
----
-
-## 📋 Prerequisites
-
-Before you begin, ensure you have the following installed on your machine:
-
-1. **Python 3.8+** – [https://www.python.org/downloads/](https://www.python.org/downloads/)
-2. **Docker Desktop** – Required for the database: [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)
-3. **Git** – To clone the repository
+Built with **FastAPI** backend, **Vanilla JavaScript** frontend, **TimescaleDB** for time-series data, and **scikit-learn** for ML predictions.
 
 ---
 
-## 🛠️ Installation & Setup
+## Architecture
 
-### 1. Clone the Repository
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        FRONTEND                                  │
+│   ┌──────────────┐  ┌──────────┐  ┌──────────┐  ┌───────────┐  │
+│   │  Finder View  │  │  Routes  │  │  Fleet   │  │ Emergency │  │
+│   │  (Stop → ETA) │  │  View    │  │  View    │  │    SOS    │  │
+│   └──────┬───────┘  └────┬─────┘  └────┬─────┘  └───────────┘  │
+│          └───────────────┼──────────────┘                        │
+│                    Leaflet Map + OSRM                            │
+│                   (Dark/Light Theme)                             │
+└────────────────────────┬─────────────────────────────────────────┘
+                         │ HTTP Polling (2s)
+                         ▼
+┌────────────────────────────────────────────────────────────────┐
+│                     FASTAPI BACKEND                             │
+│  ┌──────────┐ ┌──────────┐ ┌────────┐ ┌───────┐ ┌──────────┐ │
+│  │ /location│ │/buses/   │ │/routes │ │ /eta  │ │  /stats  │ │
+│  │  (POST)  │ │  live    │ │ (GET)  │ │ (GET) │ │  (GET)   │ │
+│  └────┬─────┘ └────┬─────┘ └───┬────┘ └───┬───┘ └────┬─────┘ │
+│       │             │           │          │          │        │
+│       ▼             ▼           ▼          ▼          ▼        │
+│  ┌─────────────────────┐  ┌──────────────────────┐            │
+│  │   TimescaleDB Pool  │  │   ML ETA Predictor   │            │
+│  │   (asyncpg)         │  │ (GradientBoosting /  │            │
+│  │                     │  │  Rule-based fallback)│            │
+│  └──────────┬──────────┘  └──────────────────────┘            │
+└─────────────┼──────────────────────────────────────────────────┘
+              │
+              ▼
+┌─────────────────────────┐    ┌─────────────────────────────┐
+│  TimescaleDB (Docker)   │    │    Bus Simulator (Python)    │
+│  - routes               │    │    - OSRM road paths         │
+│  - stops                │◄───│    - Variable speed logic    │
+│  - vehicle_logs (TSDB)  │    │    - GPS ping → /location    │
+└─────────────────────────┘    └─────────────────────────────┘
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Vanilla JS, Leaflet.js, Tailwind CSS, Font Awesome |
+| Backend | Python, FastAPI, asyncpg, Pydantic |
+| Database | TimescaleDB (PostgreSQL) via Docker |
+| ML Engine | scikit-learn (GradientBoostingRegressor), joblib |
+| Maps | OSRM (routing), CARTO (tiles) |
+| DevOps | Docker, Docker Compose |
+| Testing | pytest, httpx, FastAPI TestClient |
+
+---
+
+## Prerequisites
+
+- **Python 3.10+** — [python.org](https://www.python.org/downloads/)
+- **Docker Desktop** — [docker.com](https://www.docker.com/products/docker-desktop/)
+- **Git**
+
+---
+
+## Quick Start
+
+### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/Smart-Transit.git
+git clone https://github.com/abhinav-atul/Smart-Transit.git
 cd Smart-Transit
-```
-
----
-
-### 2. Set up the Database (Docker)
-
-We use Docker to run a TimescaleDB instance. Make sure Docker Desktop is running.
-
-```bash
-# Start the database container
-docker compose up -d
-```
-
-> **Note:** If `docker compose` fails, try:
->
-> ```bash
-> docker-compose up -d
-> ```
-
----
-
-### 3. Install Python Dependencies
-
-Install all required libraries using the provided `requirements.txt` file.
-
-```bash
 pip install -r requirements.txt
 ```
 
----
+### 2. Configure Environment
 
-### 4. Initialize the Database
+```bash
+cp .env.example .env
+# Edit .env with your database password if needed
+```
 
-#### A. Create Tables
+### 3. Start Database
 
-Ensure the database schema is applied. You can use the helper script or run the SQL manually.
+```bash
+docker compose up -d
+```
+
+### 4. Initialize Database
 
 ```bash
 python scripts/setup_tables.py
-```
-
-#### B. Load Route Data
-
-Populate the database with stops and routes defined in `simulation/data/config.json`.
-
-```bash
 python scripts/init_db_data.py
 ```
 
-**Expected Output: **
-
-```
-✅ Success! Database populated successfully.
-```
-
----
-
-## 🚀 How to Run (3-Terminal Setup)
-
-You need to run three separate processes simultaneously. Open **three terminal windows** in the project root folder.
-
----
-
-### 🖥️ Terminal 1: Backend API
-
-This server handles GPS pings and serves data to the frontend.
+### 5. (Optional) Train ML Model
 
 ```bash
-uvicorn backend.app.main_old:app --reload --port 8000
+python ml_engine/dataset_generator.py
+python ml_engine/train_model.py
+copy eta_model.pkl ml_engine\eta_model.pkl
 ```
 
-📘 API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-
----
-
-### 🚌 Terminal 2: Bus Simulator
-
-This script simulates buses moving along the routes and sending GPS coordinates.
+### 6. Run (3 Terminals)
 
 ```bash
+# Terminal 1: Backend API
+uvicorn backend.app.main:app --reload --port 8000
+
+# Terminal 2: Bus Simulator
 python simulation/bus_simulator.py
+
+# Terminal 3: Frontend
+cd frontend && python -m http.server 5500
 ```
 
-You should see logs like:
+### Docker Full-Stack (Alternative)
 
+```bash
+docker compose up --build
 ```
-📡 Sent ping → BUS-01
-```
+
+Open **[http://localhost:5500](http://localhost:5500)** in your browser.
 
 ---
 
-### 🌐 Terminal 3: Frontend Client
+## API Endpoints
 
-Use **Live Server** (VS Code extension) to run the frontend. Since the frontend uses ES6 modules, it must be served via a local web server.
-
-**Steps:**
-
-1. Open the project in **VS Code**
-2. Install the **Live Server** extension (by Ritwick Dey)
-3. Right-click on `frontend/index.html`
-4. Click **"Open with Live Server"**
-
-The application will automatically open in your browser.
-
----
-
-## 🌍 Access the Application
-
-Open your web browser and visit:
-
-👉 **[http://localhost:5500](http://localhost:5500)**
-
-### Features
-
-* **Finder View:** Search for a stop to find the nearest bus
-* **Routes View:** Click a route (e.g., AS-1) to see its path and stops on the map
-* **Fleet View:** Monitor real-time statuses of all active buses
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Health check with system status |
+| `POST` | `/location` | Receive GPS pings from simulator |
+| `GET` | `/buses/live` | Latest position of all active buses |
+| `GET` | `/routes` | Static routes and stops (nested JSON) |
+| `GET` | `/eta` | ML-powered ETA prediction |
+| `GET` | `/stats` | Fleet statistics |
+| `GET` | `/docs` | Interactive Swagger UI |
 
 ---
 
-## 📂 Project Structure
+## Features
+
+- **Finder View** — Search stops, find nearest bus with live ETA
+- **Routes View** — Click a route to see path, stops, and active buses on map
+- **Fleet View** — Monitor real-time status of all active buses
+- **ML ETA** — Machine learning powered arrival predictions (with rule-based fallback)
+- **Dark/Light Mode** — Seamless theme toggle with themed map tiles
+- **Emergency SOS** — One-click emergency broadcast
+- **Connection Status** — Live online/offline indicator
+- **Skeleton Loading** — Shimmer effects during data fetches
+
+---
+
+## Project Structure
 
 ```
 Smart-Transit/
 ├── backend/
 │   └── app/
-│       ├── main_old.py        # Main API Server
-│       └── db/schema.sql     # Database Structure
+│       ├── main.py              # App factory, lifespan, middleware
+│       ├── config.py            # Centralized settings from .env
+│       ├── models.py            # Pydantic request/response schemas
+│       ├── db/
+│       │   ├── pool.py          # Async connection pool management
+│       │   └── schema.sql       # Database schema (TimescaleDB)
+│       └── routers/
+│           ├── health.py        # GET /
+│           ├── tracking.py      # POST /location, GET /buses/live
+│           ├── routes.py        # GET /routes
+│           ├── eta.py           # GET /eta
+│           └── stats.py         # GET /stats
 ├── frontend/
-│   ├── index.html             # Main User Interface
-│   └── assets/                # JS Logic & CSS Styles
+│   ├── index.html               # Main UI
+│   └── assets/
+│       ├── app.js               # Frontend logic
+│       ├── style.css            # Glassmorphism design system
+│       └── bus-icon.svg         # Self-hosted bus marker icon
+├── ml_engine/
+│   ├── predictor.py             # ETA predictor (ML + fallback)
+│   ├── train_model.py           # Model training script
+│   └── dataset_generator.py     # Synthetic data generator
 ├── simulation/
-│   ├── bus_simulator.py       # GPS Simulation Script
-│   └── data/config.json       # Route & Stop Definitions
+│   ├── bus_simulator.py         # GPS simulation with OSRM paths
+│   └── data/config.json         # Route & stop definitions
 ├── scripts/
-│   ├── setup_tables.py        # Create a Setup Script
-│   └── init_db_data.py        # Data Seeding Script
-└── docker-compose.yml         # DB Container Configuration
+│   ├── setup_tables.py          # DB schema creation
+│   └── init_db_data.py          # Data seeding (idempotent)
+├── tests/
+│   └── test_api.py              # pytest API integration tests
+├── docker-compose.yml           # Full-stack container config
+├── Dockerfile                   # Backend container build
+├── requirements.txt             # Python dependencies
+├── .env.example                 # Environment variable template
+└── .gitignore
 ```
 
 ---
 
-## 🔧 Troubleshooting
+## Testing
 
-* **Map not loading?**
-  Check `frontend/assets/app.js` and ensure the `MAPS_API_KEY` is valid.
+```bash
+pytest tests/ -v
+```
 
-* **Error: `relation \"routes\" does not exist`?**
-  The database tables were not created. Run the schema creation step in **Installation – Step 4A**.
-
-* **CORS errors in browser console?**
-  Ensure the frontend is accessed via `http://localhost:5500` and not by double-clicking the HTML file.
+```
+15 passed in 3.18s
+```
 
 ---
 
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Map not loading | Serve frontend via HTTP (not `file://`). Use Live Server or `python -m http.server` |
+| `relation "routes" does not exist` | Run `python scripts/setup_tables.py` then `python scripts/init_db_data.py` |
+| CORS errors | Ensure frontend is at the URL configured in `FRONTEND_ORIGIN` in `.env` |
+| Database connection refused | Start Docker: `docker compose up -d` |
+| No buses on map | Start simulator: `python simulation/bus_simulator.py` |
+| ML ETA showing "fallback" | Train the model (see Quick Start step 5) |
+
+---
+
+## License
+
+MIT
