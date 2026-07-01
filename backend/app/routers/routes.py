@@ -29,6 +29,7 @@ async def get_static_routes():
         SELECT r.route_id, r.route_name, s.stop_name, s.latitude, s.longitude
         FROM routes r
         JOIN stops s ON r.route_id = s.route_id
+        WHERE r.route_id NOT LIKE 'GTFS-%'
         ORDER BY r.route_id, s.stop_sequence
     """
 

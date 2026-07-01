@@ -19,7 +19,7 @@ def client():
 
 def test_health_check_returns_200(client):
     """Health endpoint should always return 200 even without DB."""
-    response = client.get("/")
+    response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "online"
@@ -217,3 +217,134 @@ def test_openapi_schema_available(client):
     assert "/eta" in schema["paths"]
     assert "/location" in schema["paths"]
     assert "/buses/live" in schema["paths"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Telemetry Endpoint
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_telemetry_requires_api_key(client):
+    """Telemetry endpoint must reject requests without API key."""
+    response = client.post("/location/telemetry", json={"vehicle_id": "BUS-01", "passenger_count": 12})
+    assert response.status_code == 403
+
+
+def test_telemetry_invalid_api_key(client):
+    """Telemetry endpoint must reject invalid API key."""
+    response = client.post(
+        "/location/telemetry",
+        json={"vehicle_id": "BUS-01", "passenger_count": 12},
+        headers={"X-API-Key": "wrong-key"},
+    )
+    assert response.status_code == 403
+
+
+def test_telemetry_negative_count_rejected(client):
+    """Negative passenger count must be rejected."""
+    response = client.post(
+        "/location/telemetry",
+        json={"vehicle_id": "BUS-01", "passenger_count": -1},
+        headers={"X-API-Key": "sim-key-change-me"},
+    )
+    assert response.status_code == 422
+
+
+def test_telemetry_empty_vehicle_id_rejected(client):
+    """Empty vehicle_id must be rejected."""
+    response = client.post(
+        "/location/telemetry",
+        json={"vehicle_id": "", "passenger_count": 5},
+        headers={"X-API-Key": "sim-key-change-me"},
+    )
+    assert response.status_code == 422
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin Endpoints (JWT protected)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def auth_token(client):
+    """Get a valid JWT token for admin tests."""
+    res = client.post("/auth/token", json={"username": "admin", "password": "admin123"})
+    return res.json()["access_token"]
+
+
+def test_admin_routes_requires_auth(client):
+    """Admin routes list should reject unauthenticated requests."""
+    response = client.get("/admin/routes")
+    assert response.status_code == 401
+
+
+def test_admin_routes_with_auth_no_db(client, auth_token):
+    """Admin routes with valid JWT but no DB should return 503."""
+    response = client.get("/admin/routes", headers={"Authorization": f"Bearer {auth_token}"})
+    assert response.status_code == 503
+
+
+def test_admin_create_route_validation(client, auth_token):
+    """Admin route creation with missing stops should return 422."""
+    payload = {"route_id": "RT-TEST", "route_name": "Test Route", "stops": []}
+    response = client.post(
+        "/admin/routes",
+        json=payload,
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+    # Either 422 validation or 503 no-DB, both are acceptable
+    assert response.status_code in (422, 503)
+
+
+def test_admin_gtfs_status_requires_auth(client):
+    """GTFS status endpoint should require auth."""
+    response = client.get("/admin/gtfs/status")
+    assert response.status_code == 401
+
+
+def test_admin_gtfs_status_with_auth_no_db(client, auth_token):
+    """GTFS status with valid JWT but no DB returns 503."""
+    response = client.get("/admin/gtfs/status", headers={"Authorization": f"Bearer {auth_token}"})
+    assert response.status_code == 503
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GTFS Pipeline Unit Tests (no DB required)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_gtfs_demo_feed_generates_routes():
+    """Demo GTFS feed should parse into at least 2 routes."""
+    from scripts.gtfs_ingest import generate_demo_gtfs, transform_gtfs
+    gtfs = generate_demo_gtfs()
+    routes = transform_gtfs(gtfs)
+    assert len(routes) >= 2
+
+
+def test_gtfs_routes_have_required_fields():
+    """Each parsed GTFS route must have route_id, route_name, and stops."""
+    from scripts.gtfs_ingest import generate_demo_gtfs, transform_gtfs
+    routes = transform_gtfs(generate_demo_gtfs())
+    for route in routes:
+        assert "route_id" in route
+        assert "route_name" in route
+        assert "stops" in route
+        assert len(route["stops"]) >= 2
+
+
+def test_gtfs_stops_have_valid_coordinates():
+    """Each stop must have valid lat/lng values."""
+    from scripts.gtfs_ingest import generate_demo_gtfs, transform_gtfs
+    routes = transform_gtfs(generate_demo_gtfs())
+    for route in routes:
+        for stop in route["stops"]:
+            assert -90 <= stop["lat"] <= 90
+            assert -180 <= stop["lng"] <= 180
+            assert isinstance(stop["stop_name"], str)
+            assert len(stop["stop_name"]) > 0
+
+
+def test_gtfs_stop_sequences_are_ordered():
+    """Stop sequences must be in ascending order."""
+    from scripts.gtfs_ingest import generate_demo_gtfs, transform_gtfs
+    routes = transform_gtfs(generate_demo_gtfs())
+    for route in routes:
+        seqs = [s["sequence"] for s in route["stops"]]
+        assert seqs == sorted(seqs), f"Stops not ordered in route {route['route_id']}"

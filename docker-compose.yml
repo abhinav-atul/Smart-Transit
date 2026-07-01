@@ -1,4 +1,5 @@
 services:
+  # ── Database (TimescaleDB) ───────────────────────────────────────────────────
   db:
     image: timescale/timescaledb:latest-pg14
     environment:
@@ -16,22 +17,143 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    networks:
+      - transit_net
 
+  # ── FastAPI Backend ──────────────────────────────────────────────────────────
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://user:${DB_PASSWORD:-secretpass123}@db:5432/transit_db
       API_HOST: 0.0.0.0
-      API_PORT: 8000
-      FRONTEND_ORIGIN: http://localhost:5500
+      API_PORT: "8000"
+      FRONTEND_ORIGIN: http://localhost
       ML_MODEL_PATH: ml_engine/eta_model.pkl
       LOG_LEVEL: INFO
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      SIMULATOR_API_KEY: ${SIMULATOR_API_KEY:-sim-key-change-me}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
+    networks:
+      - transit_net
+
+  # ── DB Initializer (one-shot) ─────────────────────────────────────────────────
+  db_init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python scripts/setup_tables.py && python scripts/init_db_data.py"
+    environment:
+      DATABASE_URL: postgresql://user:${DB_PASSWORD:-secretpass123}@db:5432/transit_db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - transit_net
+
+  # ── Bus Simulator ────────────────────────────────────────────────────────────
+  simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python simulation/bus_simulator.py
+    environment:
+      DATABASE_URL: postgresql://user:${DB_PASSWORD:-secretpass123}@db:5432/transit_db
+      API_URL: http://api:8000
+      SIMULATOR_API_KEY: ${SIMULATOR_API_KEY:-sim-key-change-me}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - transit_net
+
+  # ── IoT Edge AI (Passenger Counting) ─────────────────────────────────────────
+  edge_node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python hardware/edge_node.py
+    environment:
+      SIMULATOR_API_KEY: ${SIMULATOR_API_KEY:-sim-key-change-me}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - transit_net
+
+  # ── Admin Dashboard (Next.js) ────────────────────────────────────────────────
+  admin:
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - transit_net
+
+  # ── Prometheus ────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - transit_net
+
+  # ── Grafana ───────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-grafana123}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - transit_net
 
 volumes:
   transit_db_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  transit_net:
+    driver: bridge

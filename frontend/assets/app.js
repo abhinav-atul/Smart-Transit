@@ -1,5 +1,5 @@
 // --- CONFIGURATION ---
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = window.location.origin;
 const BUS_ICON_URL = "assets/bus-icon.svg";
 const POLL_INTERVAL_MS = 2000;
 
@@ -126,6 +126,11 @@ function connectWebSocket() {
         const data = JSON.parse(event.data);
         if (data.type === 'bus_update' && Array.isArray(data.buses)) {
             handleLiveBusUpdate(data.buses);
+        } else if (data.type === 'telemetry') {
+            if (liveBusDataCache[data.vehicle_id]) {
+                liveBusDataCache[data.vehicle_id].passenger_count = data.passenger_count;
+                updateBusMarker(liveBusDataCache[data.vehicle_id]);
+            }
         }
     };
 
@@ -330,7 +335,7 @@ function handleLiveBusUpdate(liveBuses) {
     const formattedBuses = [];
 
     liveBuses.forEach(bus => {
-        const busData = { id: bus.vehicle_id, routeId: bus.route_id, lat: bus.lat, lng: bus.lng, speed: bus.speed };
+        const busData = { id: bus.vehicle_id, routeId: bus.route_id, lat: bus.lat, lng: bus.lng, speed: bus.speed, passenger_count: bus.passenger_count };
         liveBusDataCache[busData.id] = busData;
         updateBusMarker(busData);
         activeBusIds.add(busData.id);
@@ -416,11 +421,30 @@ function updateBusDetailCard(busData) {
 }
 
 function updateBusMarker(busData) {
-    const busIcon = L.icon({
-        iconUrl: BUS_ICON_URL, iconSize: [40, 40], iconAnchor: [20, 20]
+    let countBadge = "";
+    if (busData.passenger_count !== undefined) {
+        let badgeColor = "bg-green-500 text-white";
+        if (busData.passenger_count > 15) badgeColor = "bg-yellow-500 text-white";
+        if (busData.passenger_count > 30) badgeColor = "bg-red-500 text-white";
+        countBadge = `<div class="absolute -top-2 -right-2 ${badgeColor} text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-md border border-white dark:border-gray-800">${busData.passenger_count}</div>`;
+    }
+
+    const html = `
+        <div class="relative w-10 h-10">
+            <img src="${BUS_ICON_URL}" class="w-full h-full drop-shadow-md" />
+            ${countBadge}
+        </div>
+    `;
+
+    const busIcon = L.divIcon({
+        html: html,
+        className: 'bg-transparent',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
     });
 
     if (busMarkers[busData.id]) {
+        busMarkers[busData.id].setIcon(busIcon);
         animateMarkerTo(busMarkers[busData.id], busData.lat, busData.lng);
         if (selectedBusId === busData.id) {
             updateBusDetailCard(busData);
@@ -716,3 +740,7 @@ window.addEventListener('beforeunload', () => {
 });
 
 initMap();
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+}

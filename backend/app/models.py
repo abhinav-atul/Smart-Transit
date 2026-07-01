@@ -16,6 +16,14 @@ class GPSPing(BaseModel):
     lat: float = Field(..., ge=-90, le=90, description="Latitude")
     lng: float = Field(..., ge=-180, le=180, description="Longitude")
     speed: float = Field(default=0.0, ge=0, description="Speed in km/h")
+    passenger_count: int = Field(default=0, ge=0, description="Current passenger count from IoT sensor")
+    timestamp: Optional[datetime] = None
+
+
+class TelemetryPing(BaseModel):
+    """IoT edge telemetry ping."""
+    vehicle_id: str = Field(..., min_length=1)
+    passenger_count: int = Field(..., ge=0)
     timestamp: Optional[datetime] = None
 
 
@@ -35,6 +43,7 @@ class BusPosition(BaseModel):
     lat: float
     lng: float
     speed: float
+    passenger_count: int = 0
     last_update: str
 
 

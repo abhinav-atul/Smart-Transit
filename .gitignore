@@ -9,6 +9,7 @@ build/
 venv/
 .venv/
 env/
+node_modules/
 
 # Environment
 .env
@@ -31,3 +32,15 @@ desktop.ini
 
 # Docker
 docker-compose.override.yml
+
+# Next.js build output
+.next/
+out/
+
+# Test coverage
+coverage.xml
+.coverage
+htmlcov/
+
+# Logs
+*.log

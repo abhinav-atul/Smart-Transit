@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart-Transit API Reference</title>
+  <meta name="description" content="Complete API reference for Smart-Transit." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#0a0f1e;--surface:#111827;--surface2:#1a2236;--border:#1f2d4a;--primary:#3b82f6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--violet:#8b5cf6;--text:#e2e8f0;--muted:#64748b;--code-bg:#0d1117; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;line-height:1.6}
+    .layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+    nav{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);padding:24px 0}
+    main{padding:48px;max-width:860px}
+    .nav-logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px}
+    .nav-logo h1{font-size:16px;font-weight:700;color:var(--primary)}
+    .nav-logo p{font-size:12px;color:var(--muted)}
+    .nav-section{padding:8px 20px 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:7px 20px;font-size:13px;color:var(--text);text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+    .nav-item:hover{background:rgba(59,130,246,.15);border-left-color:var(--primary);color:#fff}
+    .mb{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace}
+    .get{background:rgba(16,185,129,.2);color:var(--green)}.post{background:rgba(59,130,246,.2);color:var(--primary)}.ws{background:rgba(139,92,246,.2);color:var(--violet)}
+    .page-header{margin-bottom:48px}
+    .page-header h1{font-size:36px;font-weight:700;background:linear-gradient(135deg,#fff,var(--primary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+    .page-header p{color:var(--muted);font-size:16px}
+    .badge-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+    .badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid}
+    .b-blue{border-color:var(--primary);color:var(--primary);background:rgba(59,130,246,.1)}.b-green{border-color:var(--green);color:var(--green);background:rgba(16,185,129,.1)}.b-violet{border-color:var(--violet);color:var(--violet);background:rgba(139,92,246,.1)}
+    .quick-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:48px}
+    .ql{display:block;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-decoration:none;transition:all .2s}
+    .ql:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+    .ql .icon{font-size:24px;margin-bottom:8px}.ql .t{font-size:13px;font-weight:600;color:#fff}.ql .d{font-size:12px;color:var(--muted)}
+    .section-title{font-size:22px;font-weight:700;color:#fff;margin:48px 0 20px;padding-top:24px;border-top:1px solid var(--border)}
+    .endpoint{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px}
+    .ep-head{display:flex;align-items:center;gap:12px;padding:16px 20px}
+    .ep-path{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:500;color:#fff}
+    .ep-desc{margin-left:auto;font-size:13px;color:var(--muted)}
+    .ep-body{padding:16px 20px 20px;border-top:1px solid var(--border)}
+    .pt{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+    .pt th{text-align:left;padding:8px 12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border)}
+    .pt td{padding:10px 12px;border-bottom:1px solid rgba(31,45,74,.5);vertical-align:top}
+    .pn{font-family:'JetBrains Mono',monospace;color:var(--primary);font-size:12px}.pt-type{font-family:'JetBrains Mono',monospace;color:var(--amber);font-size:12px}
+    .req{color:var(--red);font-size:11px;font-weight:600}.opt{color:var(--muted);font-size:11px}
+    .code-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 6px}
+    pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7}
+    .kw{color:#ff79c6}.str{color:#f1fa8c}.num{color:#bd93f9}.key{color:#8be9fd}.cmt{color:#6272a4}.url{color:#50fa7b}
+    footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);text-align:center;color:var(--muted);font-size:13px}
+    footer a{color:var(--primary);text-decoration:none}
+    @media(max-width:768px){.layout{grid-template-columns:1fr}nav{display:none}main{padding:24px 16px}}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <nav>
+    <div class="nav-logo"><h1>🚌 Smart-Transit</h1><p>API Reference v2.1.0</p></div>
+    <div class="nav-section">Core</div>
+    <a class="nav-item" href="#health"><span class="mb get">GET</span>/health</a>
+    <a class="nav-item" href="#auth"><span class="mb post">POST</span>/auth/token</a>
+    <div class="nav-section">Fleet</div>
+    <a class="nav-item" href="#location"><span class="mb post">POST</span>/location</a>
+    <a class="nav-item" href="#telemetry"><span class="mb post">POST</span>/location/telemetry</a>
+    <a class="nav-item" href="#buses"><span class="mb get">GET</span>/buses/live</a>
+    <a class="nav-item" href="#routes"><span class="mb get">GET</span>/routes</a>
+    <div class="nav-section">Intelligence</div>
+    <a class="nav-item" href="#eta"><span class="mb get">GET</span>/eta</a>
+    <a class="nav-item" href="#stats"><span class="mb get">GET</span>/stats</a>
+    <div class="nav-section">Admin</div>
+    <a class="nav-item" href="#admin-routes"><span class="mb post">POST</span>/admin/routes</a>
+    <a class="nav-item" href="#gtfs"><span class="mb post">POST</span>/admin/gtfs/demo</a>
+    <div class="nav-section">Real-time</div>
+    <a class="nav-item" href="#ws"><span class="mb ws">WS</span>/ws/buses</a>
+    <div class="nav-section">Links</div>
+    <a class="nav-item" href="/docs" target="_blank">📖 Swagger UI</a>
+    <a class="nav-item" href="/redoc" target="_blank">📄 ReDoc</a>
+  </nav>
+  <main>
+    <div class="page-header">
+      <h1>Smart-Transit API</h1>
+      <p>Real-time transit intelligence with ML ETA prediction, IoT edge telemetry, and WebSocket streaming.</p>
+      <div class="badge-row">
+        <span class="badge b-blue">v2.1.0</span><span class="badge b-green">FastAPI</span>
+        <span class="badge b-green">TimescaleDB</span><span class="badge b-violet">WebSocket</span><span class="badge b-violet">GTFS</span>
+      </div>
+    </div>
+    <div class="quick-links">
+      <a class="ql" href="/docs" target="_blank"><div class="icon">⚡</div><div class="t">Swagger UI</div><div class="d">Interactive API explorer</div></a>
+      <a class="ql" href="/redoc" target="_blank"><div class="icon">📄</div><div class="t">ReDoc</div><div class="d">Full schema reference</div></a>
+      <a class="ql" href="http://localhost:9090" target="_blank"><div class="icon">📊</div><div class="t">Prometheus</div><div class="d">Live metrics</div></a>
+      <a class="ql" href="http://localhost:3001" target="_blank"><div class="icon">📈</div><div class="t">Grafana</div><div class="d">Fleet dashboard</div></a>
+    </div>
+
+    <div class="section-title" id="health">🟢 Health</div>
+    <div class="endpoint">
+      <div class="ep-head"><span class="mb get">GET</span><span class="ep-path">/health</span><span class="ep-desc">System status — no auth required</span></div>
+      <div class="ep-body">
+        <div class="code-label">cURL</div>
+        <pre><span class="kw">curl</span> <span class="url">http://localhost:8000/health</span></pre>
+        <div class="code-label">Response 200</div>
+        <pre>{ <span class="key">"status"</span>: <span class="str">"online"</span>, <span class="key">"version"</span>: <span class="str">"2.1.0"</span>, <span class="key">"database"</span>: <span class="str">"connected"</span>, <span class="key">"ml_model"</span>: <span class="str">"loaded"</span> }</pre>
+      </div>
+    </div>
+
+    <div class="section-title" id="auth">🔐 Authentication</div>
+    <div class="endpoint">
+      <div class="ep-head"><span class="mb post">POST</span><span class="ep-path">/auth/token</span><span class="ep-desc">Get JWT access token</span></div>
+      <div class="ep-body">
+        <table class="pt"><tr><th>Field</th><th>Type</th><th>Note</th></tr>
+          <tr><td class="pn">username</td><td class="pt-type">string</td><td class="req">Required</td></tr>
+          <tr><td class="pn">password</td><td class="pt-type">string</td><td class="req">Required</td></tr>
+        </table>
+        <div class="code-label">cURL</div>
+        <pre><span class="kw">curl</span> -X POST <span class="url">http://localhost:8000/auth/token</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"username":"admin","password":"admin123"}'</span></pre>
+        <div class="code-label">Response 200</div>
+        <pre>{ <span class="key">"access_token"</span>: <span class="str">"eyJ..."</span>, <span class="key">"token_type"</span>: <span class="str">"bearer"</span> }</pre>
+      </div>
+    </div>
+
+    <div class="section-title" id="location">🚌 Fleet Tracking</div>
+    <div class="endpoint">
+      <div class="ep-head"><span class="mb post">POST</span><span class="ep-path">/location</span><span class="ep-desc">GPS ping from bus — X-API-Key required</span></div>
+      <div class="ep-body">
+        <table class="pt"><tr><th>Field</th><th>Type</th><th>Note</th></tr>
+          <tr><td class="pn">vehicle_id</td><td class="pt-type">string</td><td class="req">Required</td></tr>
+          <tr><td class="pn">route_id</td><td class="pt-type">string</td><td class="req">Required</td></tr>
+          <tr><td class="pn">lat</td><td class="pt-type">float</td><td class="req">Required — -90 to 90</td></tr>
+          <tr><td class="pn">lng</td><td class="pt-type">float</td><td class="req">Required — -180 to 180</td></tr>
+          <tr><td class="pn">speed</td><td class="pt-type">float</td><td class="req">Required — km/h ≥ 0</td></tr>
+          <tr><td class="pn">passenger_count</td><td class="pt-type">integer</td><td class="opt">Optional</td></tr>
+        </table>
+        <div class="code-label">cURL</div>
+        <pre><span class="kw">curl</span> -X POST <span class="url">http://localhost:8000/location</span> \
+  -H <span class="str">"X-API-Key: sim-key-change-me"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"vehicle_id":"BUS-01","route_id":"RT-101","lat":31.52,"lng":74.35,"speed":42}'</span></pre>
+      </div>
+    </div>
+
+    <div class="endpoint" id="telemetry">
+      <div class="ep-head"><span class="mb post">POST</span><span class="ep-path">/location/telemetry</span><span class="ep-desc">IoT passenger count — X-API-Key required</span></div>
+      <div class="ep-body">
+        <table class="pt"><tr><th>Field</th><th>Type</th><th>Note</th></tr>
+          <tr><td class="pn">vehicle_id</td><td class="pt-type">string</td><td class="req">Required</td></tr>
+          <tr><td class="pn">passenger_count</td><td class="pt-type">integer</td><td class="req">Required — 0 to 200</td></tr>
+        </table>
+        <div class="code-label">cURL</div>
+        <pre><span class="kw">curl</span> -X POST <span class="url">http://localhost:8000/location/telemetry</span> \
+  -H <span class="str">"X-API-Key: sim-key-change-me"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"vehicle_id":"BUS-01","passenger_count":28}'</span></pre>
+      </div>
+    </div>
+
+    <div class="endpoint" id="buses">
+      <div class="ep-head"><span class="mb get">GET</span><span class="ep-path">/buses/live</span><span class="ep-desc">All active buses with live positions</span></div>
+      <div class="ep-body">
+        <div class="code-label">cURL</div>
+        <pre><span class="kw">curl</span> <span class="url">http://localhost:8000/buses/live</span></pre>
+        <div class="code-label">Response 200</div>
+        <pre>[{ <span class="key">"vehicle_id"</span>:<span class="str">"BUS-01"</span>, <span class="key">"lat"</span>:<span class="num">31.52</span>, <span class="key">"lng"</span>:<span class="num">74.35</span>, <span class="key">"speed"</span>:<span class="num">38</span>, <span class="key">"passenger_count"</span>:<span class="num">24</span> }]</pre>
+      </div>
+    </div>
+
+    <div class="section-title" id="eta">🧠 Intelligence</div>
+    <div class="endpoint">
+      <div class="ep-head"><span class="mb get">GET</span><span class="ep-path">/eta</span><span class="ep-desc">ML-powered ETA prediction</span></div>
+      <div class="ep-body">
+        <table class="pt"><tr><th>Query Param</th><th>Type</th><th>Note</th></tr>
+          <tr><td class="pn">distance_meters</td><td class="pt-type">float</td><td class="req">Required — > 0</td></tr>
+          <tr><td class="pn">current_speed_kmh</td><td class="pt-type">float</td><td class="req">Required — ≥ 0</td></tr>
+        </table>
+        <div class="code-label">cURL</div>
+        <pre><span class="kw">curl</span> <span class="str">"http://localhost:8000/eta?distance_meters=5000&current_speed_kmh=40"</span></pre>
+        <div class="code-label">Response 200</div>
+        <pre>{ <span class="key">"prediction"</span>:<span class="str">"7 min"</span>, <span class="key">"seconds"</span>:<span class="num">432</span>, <span class="key">"source"</span>:<span class="str">"ML_model"</span> }</pre>
+      </div>
+    </div>
+
+    <div class="section-title" id="gtfs">🌐 GTFS Pipeline</div>
+    <div class="endpoint">
+      <div class="ep-head"><span class="mb post">POST</span><span class="ep-path">/admin/gtfs/demo</span><span class="ep-desc">Ingest demo GTFS feed — Bearer token required</span></div>
+      <div class="ep-body">
+        <div class="code-label">cURL</div>
+        <pre><span class="kw">curl</span> -X POST <span class="url">http://localhost:8000/admin/gtfs/demo</span> \
+  -H <span class="str">"Authorization: Bearer &lt;TOKEN&gt;"</span></pre>
+        <div class="code-label">Response 200</div>
+        <pre>{ <span class="key">"status"</span>:<span class="str">"success"</span>, <span class="key">"routes_ingested"</span>:<span class="num">3</span>, <span class="key">"source"</span>:<span class="str">"demo"</span> }</pre>
+      </div>
+    </div>
+
+    <div class="section-title" id="ws">⚡ WebSocket</div>
+    <div class="endpoint">
+      <div class="ep-head"><span class="mb ws">WS</span><span class="ep-path">ws://localhost:8000/ws/buses</span><span class="ep-desc">Real-time fleet stream</span></div>
+      <div class="ep-body">
+        <div class="code-label">JavaScript</div>
+        <pre><span class="kw">const</span> ws = <span class="kw">new</span> WebSocket(<span class="str">"ws://localhost:8000/ws/buses"</span>);
+ws.onmessage = (e) => {
+  <span class="kw">const</span> msg = JSON.parse(e.data);
+  <span class="cmt">// msg.type === "bus_update" → GPS position</span>
+  <span class="cmt">// msg.type === "telemetry"  → passenger count</span>
+};</pre>
+      </div>
+    </div>
+
+    <footer>
+      <p>Smart-Transit API v2.1.0 &bull; <a href="/docs">Swagger</a> &bull; <a href="/redoc">ReDoc</a></p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

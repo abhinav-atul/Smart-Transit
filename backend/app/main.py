@@ -71,7 +71,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # --- Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_ORIGIN],
+    allow_origins=[settings.FRONTEND_ORIGIN, "http://localhost:3000"],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
@@ -84,3 +84,24 @@ app.include_router(routes.router)
 app.include_router(eta.router)
 app.include_router(stats.router)
 app.include_router(websocket.router)
+from backend.app.routers import analytics
+app.include_router(analytics.router)
+from backend.app.routers import admin
+app.include_router(admin.router)
+
+# --- Prometheus Metrics ---
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+    logger.info("Prometheus metrics exposed at /metrics")
+except ImportError:
+    logger.warning("prometheus-fastapi-instrumentator not installed — metrics disabled.")
+
+# --- Static Files ---
+# Serve frontend static files — must be LAST (catch-all route)
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
+if frontend_dir.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")

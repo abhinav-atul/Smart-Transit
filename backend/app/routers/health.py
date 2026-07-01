@@ -9,7 +9,7 @@ from backend.app.db.pool import get_pool
 router = APIRouter(tags=["System"])
 
 
-@router.get("/", response_model=HealthResponse)
+@router.get("/health", response_model=HealthResponse)
 def health_check():
     """System health check with component status."""
     from backend.app.main import app
